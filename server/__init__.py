@@ -11,6 +11,7 @@ def create_app(config_name):
 
     db.init_app(app)
 
-    #TODO: Attach routes here
+    from .api.v1 import api as api_blueprint
+    app.register_blueprint(api_blueprint, url_prefix='/api/v1')
 
     return app
