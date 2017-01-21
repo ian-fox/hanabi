@@ -1,7 +1,7 @@
 from . import api
 from flask import jsonify, url_for
 from hanabi import db
-from hanabi.classes import Game
+from hanabi.models import Game
 
 @api.route('/games', methods=['GET'])
 def get_games():

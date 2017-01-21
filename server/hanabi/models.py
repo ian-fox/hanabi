@@ -1,7 +1,16 @@
 from . import db
-from hanabi.colour import Colour
+from enum import Enum
 from random import shuffle
 from flask import url_for
+
+class Colour(Enum):
+    BLUE = 0
+    GREEN = 1
+    RED = 2
+    WHITE = 3
+    YELLOW = 4
+    RAINBOW = 5
+
 
 class Hand:
     def __init__(self, player):
