@@ -1,5 +1,6 @@
 from . import db
 from hanabi.colour import Colour
+from random import shuffle
 
 class Hand:
     def __init__(self, player):
@@ -7,15 +8,23 @@ class Hand:
         self.player = player
 
 class Card:
-    def __init__(self, colour, rank):
-        self.colour = colour
-        self.rank = rank
+    def __init__(self, intRepresentation):
+        self.colour = Colour(intRepresentation // 10)
+        self.rank = intRepresentation % 10
         self.colourKnown = False
         self.rankKnown = False
 
+    def toNum(self):
+        return 10 * self.colour.value + self.rank
+
 def newDeck():
-    """Return a full, shuffled deck in string form"""
-    return "a deck"
+    """Return a full, shuffled deck in number form"""
+    deck = []
+    for colour in range(6):
+        for rank in [1, 1, 1, 2, 2, 3, 3, 4, 4, 5]:
+            deck.append(10 * colour + rank)
+    shuffle(deck)
+    return deck
 
 class Player:
     def __init__(self, hand):
