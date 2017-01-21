@@ -1,6 +1,7 @@
 from . import db
 from hanabi.colour import Colour
 from random import shuffle
+from flask import url_for
 
 class Hand:
     def __init__(self, player):
@@ -49,3 +50,19 @@ class Game(db.Model):
 
     def __repr__(self):
         return '<Game %r>' % self.id
+
+    def to_json(self):
+        json_game = {
+            'url': url_for('api.game', id=self.id, _external=True),
+            'discard': self.discard,
+            'hands': self.hands,
+            'deckSize': len(self.deck),
+            'turn': self.turn,
+            'started': self.started,
+            'rainbowIsColour': self.rainbowIsColour,
+            'perfectOrBust': self.perfectOrBust,
+            'inPlay': self.inPlay,
+            'misfires': self.misfires,
+            'hints': self.hints
+        }
+        return json_game
