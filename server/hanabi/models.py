@@ -61,8 +61,9 @@ class Game(db.Model):
         return '<Game %r>' % self.id
 
     def to_json(self):
+        print(self.id)
         json_game = {
-            'url': url_for('api.game', id=self.id, _external=True),
+            'url': url_for('api.get_specific_game', id=self.id, _external=True),
             'discard': self.discard,
             'hands': self.hands,
             'deckSize': len(self.deck),

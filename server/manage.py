@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import os
 from hanabi import create_app, db
+from hanabi.models import Game
 from flask_script import Manager, Shell
 
 COV = None
@@ -14,10 +15,7 @@ manager = Manager(app)
 
 
 def make_shell_context():
-    return {
-        app: app,
-        db: db
-    }
+    return dict(app=app, db=db, Game=Game)
 manager.add_command("shell", Shell(make_context=make_shell_context))
 
 
