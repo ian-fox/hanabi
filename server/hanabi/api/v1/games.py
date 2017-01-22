@@ -22,3 +22,19 @@ def new_game():
 def get_specific_game(id):
     return jsonify(Game.query.get(id).to_json()), 200, \
            {'Location': url_for('api.get_specific_game', id=id, _external=True)}
+
+@api.route('/games/<int:id>/join', methods=['PUT'])
+def join_game(id):
+    game = Game.query.get(id)
+
+    # Can't have more than 5 players
+    if len(game.players) == 5:
+        return jsonify({'error': 'game is full'}), 400
+
+    newID = uuid4().hex
+    game.players.append(newID)
+    db.session.add(game)
+    db.session.commit()
+    return jsonify(game.to_json()), 200, \
+           {'Location': url_for('api.get_specific_game', id=game.id, _external=True),
+            'id': newID}
