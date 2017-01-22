@@ -3,85 +3,82 @@
 
 Ian Fox
 
-Last updated September 20, 2016
+Last updated January 22, 2017
 
-## POST /newgame  
-**Query params:** public (boolean) - whether the game is publicly listed on the main page  
+## POST /games/new  
+Body params (0 or more):
+* `public` (boolean) - whether the game is publicly listed on the main page. Default: `false`
+* `rainbowIsColour` (boolean) - whether to treat rainbow as its own colour. Default: `true`
+* `hardMode` (boolean) - whether there is only one of each rainbow card. Default: `false`
+* `perfectOrBust` (boolean) - whether the game should be scored in binary (you reached 30 or you didn't). Default: `false`
+For more information on the latter three options see "Game Options" in the functional spec.
 
 ### Responses:
-* `200 OK`
+* `201 OK`
 * `500 Server Error`
 
+If response was OK, also sends the newly created Game object as a payload, and the following headers:
+* `Location`: url to the created game api endpoint  
+* `id`: UUID for the admin of the game (the caller of this endpoint)
+
 ## GET /games  
-Returns an array of objects:  
+Returns an array of pared down game objects:  
 ```
 {
   id: '12345',  
-  players: 2
+  players: 2,
+  perfectOrBust: false,
+  rainbowIsColour: false,
+  hardMode: false,
+  url: 'url to game object api endpoint'
 }
 ```
-Games that have been started will not be shown.
+Games that have been started or are not public will not be shown.
 
 ## GET /games/:gameid
 Returns a game object:  
 ```
 {  
-  inPlay: dict,  
+  url: string,  
   discard: dict,  
-  cardsInDeck: integer,  
-  turn: integer,  
   hands: array,  
+  hardMode: boolean,  
+  deckSize: integer,  
+  turn: integer,  
+  started: boolean,  
+  rainbowIsColour: boolean,  
+  perfectOrBust: boolean,  
+  inPlay: dict,  
+  lastTurn: boolean,  
+  lastPlayer: integer or null,  
   misfires: integer,  
-  hints: integer,
-  rainbowIsColour: boolean,
-  perfectOrBust: boolean,
-  started: boolean  
+  hints: integer
 }
 ```
 
 ### Fields:  
-* `inPlay:` dictionary of colour -> array of card objects
-* `discard:` dictionary of colour -> array of card objects
-* `cardsInDeck:` number of cards remaining in the deck
-* `turn:` integer, index of player whose turn it is
+* `url:` the url to the api endpoint for the game  
+* `discard:` dictionary of integer -> integer (see: card representation)
 * `hands:` array of hand objects  
-* `misfires:` integer, 1-3, number of missfires remaining
-* `hints:` integer, 0-8, number of hints remaining
-* `rainbowIsColour:` boolean, if rainbow counts as its own colour
-* `perfectOrBust:` boolean, whether the game is scored partially or not 
-* `started:` whether the game is waiting for players or has started
+* `hardMode:` whether the game is in hard mode (see: game options)
+* `deckSize:` number of cards remaining in the deck  
+* `turn:` index of player whose turn it is  
+* `started:` whether the game has started  
+* `rainbowIsColour:` whether rainbow counts as its own colour (see: game options)  
+* `perfectOrBust:` whether the game is in binary scoring mode (see: game options)  
+* `inPlay:` dictionary of integer -> integer (see: card representation)  
+* `lastTurn:` whether or not it is the last turn (see: game options)
+* `lastPlayer:` index of the last player to get a turn if lastTurn is true, null otherwise  
+* `misfires:` number of misfires (3 = good, 0 = you're dead)
+* `hints:` number of remaining hints (8 = all hints, 0 = no hints)
 
-## PUT /games/gameid
+## PUT /games/:gameid/join
 Body params (one or more):
-* `leave:` string id of the client leaving the game
-* `join:` string id of the client joining the game
-
-The following parameters are only open to the group admin:
-* `start:` start the game. Game starts if this key is defined
-* `rainbowIsColour:` switches the mode of the room
-* `perfectOrBust:` switches the mode of the room
-
-All admin requests require a unique `token,` as does leaving a game
-
 
 ### Responses
 * `200 OK`
-* `500 Something bad happened`
+* `500 Game is full or has started`
 
-If it was a join request, also returns a unique `token`.
-
-
-## POST /games/:gameId/action
-### Body parameters:  
- * `action_type`: One of hint, discard, play
-
-#### If hint:
- * `player`: index of the player receiving the hint
- * `attribute`: one of colour or number
-
-#### If discard/play
- * `index`: the index within the specified section of the card to discard/play
-
-### Responses
-* `200 OK`
-* `403 Invalid`: the hint is invalid, it is not the player's turn, etc
+If response was OK, returns the following headers:  
+* `Location`: url to the joined game api endpoint
+* `id`: UUID for the admin of the game (the caller of this endpoint)  

@@ -10,6 +10,7 @@ def game_summary(game):
         'url': url_for('api.get_specific_game', id=game.id, _external=True),
         'rainbowIsColour': game.rainbowIsColour,
         'perfectOrBust': game.perfectOrBust,
+        'hardMode': game.hardMode,
         'players': len(game.players)
     }
 @api.route('/games', methods=['GET'])
@@ -51,7 +52,7 @@ def join_game(id):
 
     # Can't have more than 5 players, can't join a game that's started already (yet)
     if len(game.players) == 5 or game.started:
-        return jsonify({'error': 'game is full or has started'}), 400
+        return jsonify({'error': 'game is full or has started'}), 500
 
     newID = uuid4().hex
     db.session.add(game)
