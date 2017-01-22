@@ -18,6 +18,7 @@ class APITestCase(unittest.TestCase):
         self.app_context.pop()
 
     def test_new_game(self):
+        """Can make a new game with default settings"""
         response = self.client.post(url_for('api.new_game'))
         self.assertTrue(response.status_code == 201)
         url = response.headers.get('Location')
@@ -36,6 +37,34 @@ class APITestCase(unittest.TestCase):
 
         # Check that the game hasn't started
         self.assertFalse(game.started)
+
+    def test_new_game_with_settings(self):
+        """Should be able to specify settings in query"""
+        # Try to make a game that's public
+        response = self.client.post(
+            url_for('api.new_game'),
+            headers={'Content-Type': 'application/json'},
+            data=json.dumps({'public': True}))
+        self.assertTrue(response.status_code == 201)
+
+        url = response.headers.get('Location')
+        gameID = url.split('/')[6]
+        game = Game.query.get(gameID)
+        self.assertTrue(game.public)
+
+        # Try to make a game with both variants set to true, public set to false
+        response = self.client.post(
+            url_for('api.new_game'),
+            headers={'Content-Type': 'application/json'},
+            data=json.dumps({'public': False, 'rainbowIsColour': True, 'perfectOrBust': True}))
+        self.assertTrue(response.status_code == 201)
+
+        url = response.headers.get('Location')
+        gameID = url.split('/')[6]
+        game = Game.query.get(gameID)
+        self.assertFalse(game.public)
+        self.assertTrue(game.perfectOrBust)
+        self.assertTrue(game.rainbowIsColour)
 
 
     def test_join_game(self):

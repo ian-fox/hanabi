@@ -1,5 +1,5 @@
 from . import api
-from flask import jsonify, url_for
+from flask import jsonify, url_for, request
 from hanabi import db
 from hanabi.models import Game
 from uuid import uuid4
@@ -20,7 +20,11 @@ def get_games():
 @api.route('/games/new', methods=['POST'])
 def new_game():
     adminID = uuid4().hex
-    newgame = Game(players=[adminID])
+    json = request.get_json()
+    perfectOrBust = json and 'perfectOrBust' in json.keys() and bool(json['perfectOrBust'])
+    rainbowIsColour = json and 'rainbowIsColour' in json.keys() and bool(json['rainbowIsColour'])
+    public = json and 'public' in json.keys() and bool(json['public'])
+    newgame = Game(players=[adminID], perfectOrBust=perfectOrBust, rainbowIsColour=rainbowIsColour, public=public)
     db.session.add(newgame)
     db.session.commit()
     return jsonify(newgame.to_json()), 201, \
