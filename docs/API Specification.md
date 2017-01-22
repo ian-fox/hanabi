@@ -5,6 +5,17 @@ Ian Fox
 
 Last updated January 22, 2017
 
+## Card Representation
+Cards are represented as integers when in the deck, discard, or play. If c is a card then:
+* `c mod 10` corresponds to the rank of the card
+* `floor(c/10)` corresponds to the colour of the card, as follows:  
+    + 0: blue  
+    + 1: green  
+    + 2: red  
+    + 3: white  
+    + 4: yellow  
+    + 5: rainbow  
+
 ## POST /games/new  
 Body params (0 or more):
 * `public` (boolean) - whether the game is publicly listed on the main page. Default: `false`
