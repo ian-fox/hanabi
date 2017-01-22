@@ -38,10 +38,14 @@ class APITestCase(unittest.TestCase):
         # Check that the game hasn't started
         self.assertFalse(game.started)
 
+        # Check other gamemodes
+        self.assertFalse(game.hardMode)
+        self.assertTrue(game.rainbowIsColour)
+        self.assertFalse(game.perfectOrBust)
+
     def test_new_game_with_settings(self):
         """Should be able to specify settings in query"""
         # Try to make a game that's public
-        print("First test:")
         response = self.client.post(
             url_for('api.new_game'),
             headers={'Content-Type': 'application/json'},
@@ -53,12 +57,11 @@ class APITestCase(unittest.TestCase):
         game = Game.query.get(gameID)
         self.assertTrue(game.public)
 
-        print("Second Test")
         # Try to make a game with both variants set to true, public set to false
         response = self.client.post(
             url_for('api.new_game'),
             headers={'Content-Type': 'application/json'},
-            data=json.dumps({'public': False, 'rainbowIsColour': True, 'perfectOrBust': True, 'hardMode': True}))
+            data=json.dumps({'public': False, 'rainbowIsColour': False, 'perfectOrBust': True, 'hardMode': True}))
         self.assertTrue(response.status_code == 201)
 
         url = response.headers.get('Location')
@@ -66,8 +69,7 @@ class APITestCase(unittest.TestCase):
         game = Game.query.get(gameID)
         self.assertFalse(game.public)
         self.assertTrue(game.perfectOrBust)
-        self.assertTrue(game.rainbowIsColour)
-        print(Game.query.all())
+        self.assertFalse(game.rainbowIsColour)
 
 
     def test_join_game(self):

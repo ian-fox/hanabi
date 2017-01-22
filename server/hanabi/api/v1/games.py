@@ -23,7 +23,7 @@ def new_game():
     json = request.get_json()
     hardMode = json and 'hardMode' in json.keys() and bool(json['hardMode'])
     perfectOrBust = json and 'perfectOrBust' in json.keys() and bool(json['perfectOrBust'])
-    rainbowIsColour = json and 'rainbowIsColour' in json.keys() and bool(json['rainbowIsColour'])
+    rainbowIsColour = not (json and 'rainbowIsColour' in json.keys() and not bool(json['rainbowIsColour']))
     public = json and 'public' in json.keys() and bool(json['public'])
     newgame = Game(
         players=[adminID],
