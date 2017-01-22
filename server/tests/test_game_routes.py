@@ -98,7 +98,7 @@ class APITestCase(unittest.TestCase):
 
         # Try to join
         response = self.client.put(url_for('api.join_game', id=g.id))
-        self.assertTrue(response.status_code == 400)
+        self.assertTrue(response.status_code == 500)
 
     def test_join_started_game(self):
         """Shouldn't be able to join a game that has started (in this release)"""
@@ -109,7 +109,7 @@ class APITestCase(unittest.TestCase):
 
         # Try to join
         response = self.client.put(url_for('api.join_game', id=g.id))
-        self.assertTrue(response.status_code == 400)
+        self.assertTrue(response.status_code == 500)
 
     def test_get_all_games(self):
         "Shouldn't return private games or games that have already started"
