@@ -54,10 +54,9 @@ class Game(db.Model):
     turn = db.Column(db.SmallInteger, default=0)
 
     def __repr__(self):
-        return '<Game %r>' % self.id
+        return '<Game with %r players>' % len(self.players)
 
     def to_json(self):
-        print(self.id)
         json_game = {
             'url': url_for('api.get_specific_game', id=self.id, _external=True),
             'discard': self.discard,

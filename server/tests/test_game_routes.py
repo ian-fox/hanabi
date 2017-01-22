@@ -35,3 +35,23 @@ class APITestCase(unittest.TestCase):
 
         # Check that the game hasn't started
         self.assertFalse(game.started)
+
+
+    def test_join_game(self):
+        # Create a new game to join
+        g = Game()
+        db.session.add(g)
+        db.session.commit()
+
+        response = self.client.put(url_for('api.join_game', id=g.id))
+        self.assertTrue(response.status_code == 200)
+        url = response.headers.get('Location')
+        self.assertTrue('/api/v1/games/' in url)
+
+        updated = Game.query.all()[0]
+        print(updated)
+
+        # Check that we're in the game
+        userID = response.headers.get('id')
+        # print(type(userID))
+        # print(type(g.players[0]))
