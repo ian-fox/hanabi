@@ -1,9 +1,9 @@
 from . import db
-from enum import Enum
+from enum import IntEnum
 from random import shuffle
 from flask import url_for
 
-class Colour(Enum):
+class Colour(IntEnum):
     BLUE = 0
     GREEN = 1
     RED = 2

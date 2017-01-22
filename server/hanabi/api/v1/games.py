@@ -10,7 +10,7 @@ def get_games():
 
 @api.route('/games/new', methods=['POST'])
 def new_game():
-    adminID = uuid4()
+    adminID = uuid4().hex
     newgame = Game(players=[adminID])
     db.session.add(newgame)
     db.session.commit()
