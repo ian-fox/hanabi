@@ -27,12 +27,20 @@ class Card:
     def toNum(self):
         return 10 * self.colour.value + self.rank
 
-def newDeck():
+def newDeck(hardMode=False):
     """Return a full, shuffled deck in number form"""
     deck = []
-    for colour in range(6):
+    for colour in range(5):
         for rank in [1, 1, 1, 2, 2, 3, 3, 4, 4, 5]:
             deck.append(10 * colour + rank)
+
+    if hardMode:
+        for rank in [1, 1, 1, 2, 2, 3, 3, 4, 4, 5]:
+            deck.append(50 + rank)
+    else:
+        for rank in range(1, 6):
+            deck.append(50 + rank)
+
     shuffle(deck)
     return deck
 
@@ -40,18 +48,22 @@ class Game(db.Model):
     __tablename__ = 'games'
     id = db.Column(db.Integer, primary_key=True)
 
+    # Settings
+    hardMode = db.Column(db.Boolean, default=False)
+    perfectOrBust = db.Column(db.Boolean, default=False)
+    public = db.Column(db.Boolean, index=True, default=False)
+    rainbowIsColour = db.Column(db.Boolean, default=False)
+
+    # Game Info
     discard = db.Column(db.PickleType, default=dict.fromkeys(list(Colour)))
-    deck = db.Column(db.PickleType, default=newDeck())
+    deck = db.Column(db.PickleType, default=[])
     hands = db.Column(db.PickleType, default=[])
     hints = db.Column(db.SmallInteger, default=8)
     inPlay = db.Column(db.PickleType, default=dict.fromkeys(list(Colour)))
     lastTurn = db.Column(db.Boolean, default=False)
     lastPlayer = db.Column(db.SmallInteger, nullable=True, default=None)
     misfires = db.Column(db.SmallInteger, default=3)
-    perfectOrBust = db.Column(db.Boolean, default=False)
     players = db.Column(db.PickleType, default=[])
-    public = db.Column(db.Boolean, index=True, default=False)
-    rainbowIsColour = db.Column(db.Boolean, default=False)
     started = db.Column(db.Boolean, index=True, default=False)
     turn = db.Column(db.SmallInteger, default=0)
 
@@ -63,12 +75,15 @@ class Game(db.Model):
             'url': url_for('api.get_specific_game', id=self.id, _external=True),
             'discard': self.discard,
             'hands': self.hands,
+            'hardMode': self.hardMode,
             'deckSize': len(self.deck),
             'turn': self.turn,
             'started': self.started,
             'rainbowIsColour': self.rainbowIsColour,
             'perfectOrBust': self.perfectOrBust,
             'inPlay': self.inPlay,
+            'lastTurn': self.lastTurn,
+            'lastPlayer': self.lastPlayer,
             'misfires': self.misfires,
             'hints': self.hints
         }

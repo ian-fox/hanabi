@@ -21,11 +21,10 @@ class GameModelTestCase(unittest.TestCase):
         json_game = g.to_json()
 
         expected_keys = ['url', 'inPlay', 'started', 'discard', 'turn', 'misfires', 'perfectOrBust', 'rainbowIsColour',
-                         'hints', 'hands', 'deckSize']
+                         'hints', 'hands', 'deckSize', 'hardMode', 'lastTurn', 'lastPlayer']
         self.assertEqual(sorted(json_game.keys()), sorted(expected_keys))
         self.assertTrue('api/v1/games/' in json_game['url'])
         self.assertFalse(json_game['started'])
         self.assertTrue(json_game['turn'] == 0)
         self.assertTrue(json_game['misfires'] == 3)
         self.assertTrue(json_game['hints'] == 8)
-        self.assertTrue(json_game['deckSize'] == 60)

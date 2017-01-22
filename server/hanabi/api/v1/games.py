@@ -21,10 +21,16 @@ def get_games():
 def new_game():
     adminID = uuid4().hex
     json = request.get_json()
+    hardMode = json and 'hardMode' in json.keys() and bool(json['hardMode'])
     perfectOrBust = json and 'perfectOrBust' in json.keys() and bool(json['perfectOrBust'])
     rainbowIsColour = json and 'rainbowIsColour' in json.keys() and bool(json['rainbowIsColour'])
     public = json and 'public' in json.keys() and bool(json['public'])
-    newgame = Game(players=[adminID], perfectOrBust=perfectOrBust, rainbowIsColour=rainbowIsColour, public=public)
+    newgame = Game(
+        players=[adminID],
+        perfectOrBust=perfectOrBust,
+        rainbowIsColour=rainbowIsColour,
+        hardMode=hardMode,
+        public=public)
     db.session.add(newgame)
     db.session.commit()
     return jsonify(newgame.to_json()), 201, \
