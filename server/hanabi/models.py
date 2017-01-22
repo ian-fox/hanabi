@@ -36,10 +36,6 @@ def newDeck():
     shuffle(deck)
     return deck
 
-class Player:
-    def __init__(self, hand):
-        self.hand = hand
-
 class Game(db.Model):
     __tablename__ = 'games'
     id = db.Column(db.Integer, primary_key=True)
