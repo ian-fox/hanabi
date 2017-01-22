@@ -4,9 +4,18 @@ from hanabi import db
 from hanabi.models import Game
 from uuid import uuid4
 
+def game_summary(game):
+    """The all games list only needs some information, not all"""
+    return {
+        'url': url_for('api.get_specific_game', id=game.id, _external=True),
+        'rainbowIsColour': game.rainbowIsColour,
+        'perfectOrBust': game.perfectOrBust,
+        'players': len(game.players)
+    }
 @api.route('/games', methods=['GET'])
 def get_games():
-    return Game.query.filter_by(started=False).all()
+    games = list(map(game_summary, Game.query.filter_by(started=False, public=True).all()))
+    return jsonify(games), 200
 
 @api.route('/games/new', methods=['POST'])
 def new_game():

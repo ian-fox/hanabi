@@ -2,6 +2,7 @@ import unittest
 from flask import url_for
 from hanabi import create_app, db
 from hanabi.models import Game
+import json
 
 class APITestCase(unittest.TestCase):
     def setUp(self):
@@ -75,3 +76,20 @@ class APITestCase(unittest.TestCase):
         # Try to join
         response = self.client.put(url_for('api.join_game', id=g.id))
         self.assertTrue(response.status_code == 400)
+
+    def test_get_all_games(self):
+        "Shouldn't return private games or games that have already started"
+        # Make some games
+        normalGame = Game(public=True)
+        startedGame = Game(started=True)
+        privateGame = Game(public=False)
+        db.session.add_all([normalGame, startedGame, privateGame])
+        db.session.commit()
+
+        # Try to get the games
+        response = self.client.get(url_for('api.get_games'))
+        self.assertTrue(response.status_code == 200)
+
+        # We should get one result
+        json_response = json.loads(response.data.decode('utf-8'))
+        self.assertTrue(len(json_response) == 1)

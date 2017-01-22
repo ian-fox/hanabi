@@ -48,7 +48,7 @@ class Game(db.Model):
     misfires = db.Column(db.SmallInteger, default=3)
     perfectOrBust = db.Column(db.Boolean, default=False)
     players = db.Column(db.PickleType, default=[])
-    public = db.Column(db.Boolean, default=False)
+    public = db.Column(db.Boolean, index=True, default=False)
     rainbowIsColour = db.Column(db.Boolean, default=False)
     started = db.Column(db.Boolean, index=True, default=False)
     turn = db.Column(db.SmallInteger, default=0)
