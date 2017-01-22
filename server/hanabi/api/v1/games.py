@@ -30,20 +30,14 @@ def join_game(id):
     if not game:
         return jsonify({'error': 'not found'}), 404
 
-    # Can't have more than 5 players
+    # Can't have more than 5 players, can't join a game that's started already (yet)
     if len(game.players) == 5 or game.started:
         return jsonify({'error': 'game is full or has started'}), 400
 
     newID = uuid4().hex
-    print("IN JOIN ENDPOINT")
-    print(game.players) # Nothing yet
-
     db.session.add(game)
     game.players.append(newID)
-    print(game.players) # New ID shows up
-
     db.session.flush()
-    print(game.players) # New ID missing in action!!!
 
     return jsonify(game.to_json()), 200, \
            {'Location': url_for('api.get_specific_game', id=game.id, _external=True),

@@ -38,6 +38,7 @@ class APITestCase(unittest.TestCase):
 
 
     def test_join_game(self):
+        """Should be able to join games"""
         # Create a new game to join
         g = Game()
         db.session.add(g)
@@ -48,10 +49,29 @@ class APITestCase(unittest.TestCase):
         url = response.headers.get('Location')
         self.assertTrue('/api/v1/games/' in url)
 
-        updated = Game.query.all()[0]
-        print(updated)
 
         # Check that we're in the game
         userID = response.headers.get('id')
-        # print(type(userID))
-        # print(type(g.players[0]))
+        self.assertTrue(userID == g.players[0])
+
+    def test_game_capacity(self):
+        """Shouldn't be able to join a game with 5 players"""
+        # Create a new game
+        g = Game(players=[1,2,3,4,5])
+        db.session.add(g)
+        db.session.commit()
+
+        # Try to join
+        response = self.client.put(url_for('api.join_game', id=g.id))
+        self.assertTrue(response.status_code == 400)
+
+    def test_join_started_game(self):
+        """Shouldn't be able to join a game that has started (in this release)"""
+        # Create a new game
+        g = Game(started=True)
+        db.session.add(g)
+        db.session.commit()
+
+        # Try to join
+        response = self.client.put(url_for('api.join_game', id=g.id))
+        self.assertTrue(response.status_code == 400)
