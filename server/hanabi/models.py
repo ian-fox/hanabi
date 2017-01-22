@@ -45,6 +45,8 @@ class Game(db.Model):
     hands = db.Column(db.PickleType, default=[])
     hints = db.Column(db.SmallInteger, default=8)
     inPlay = db.Column(db.PickleType, default=dict.fromkeys(list(Colour)))
+    lastTurn = db.Column(db.Boolean, default=False)
+    lastPlayer = db.Column(db.SmallInteger, nullable=True, default=None)
     misfires = db.Column(db.SmallInteger, default=3)
     perfectOrBust = db.Column(db.Boolean, default=False)
     players = db.Column(db.PickleType, default=[])
