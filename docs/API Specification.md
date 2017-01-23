@@ -82,3 +82,14 @@ Body params (one or more):
 If response was OK, returns the following headers:  
 * `Location`: url to the joined game api endpoint
 * `id`: UUID for the admin of the game (the caller of this endpoint)  
+
+## PUT /games/:gameid/start
+Headers:
+* `id`: UUID of the user making the request (must match that of the admin of the game)
+
+Starts the game (deals hands, chooses random player to start).
+
+### Responses
+* `200 OK`
+* `403 Only admin can start the game`
+* `500 Cannot start with one player or game in progress`
