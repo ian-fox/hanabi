@@ -3,6 +3,9 @@ from enum import IntEnum
 from random import shuffle, randint
 from flask import url_for
 
+def rotate(array, offset):
+    return array[-offset:] + array[:offset]
+
 class Colour(IntEnum):
     BLUE = 0
     GREEN = 1
@@ -64,11 +67,11 @@ class Game(db.Model):
     def __repr__(self):
         return '<Game %r>' % self.id
 
-    def to_json(self):
+    def to_json(self, playerOffset=0):
         json_game = {
             'url': url_for('api.get_specific_game', id=self.id, _external=True),
             'discard': self.discard,
-            'hands': self.hands,
+            'hands': rotate(self.hands, playerOffset),
             'hardMode': self.hardMode,
             'deckSize': len(self.deck),
             'turn': self.turn,

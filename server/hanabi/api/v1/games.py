@@ -40,7 +40,13 @@ def new_game():
 
 @api.route('/games/<int:id>')
 def get_specific_game(id):
-    return jsonify(Game.query.get(id).to_json()), 200, \
+    game = Game.query.get_or_404(id)
+
+    playerID = request.headers.get('id')
+    if not playerID in game.players:
+        return jsonify({'error': 'id missing or not in game'}), 403
+
+    return jsonify(game.to_json(game.players.index(playerID))), 200, \
            {'Location': url_for('api.get_specific_game', id=id, _external=True)}
 
 @api.route('/games/<int:id>/join', methods=['PUT'])

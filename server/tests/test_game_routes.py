@@ -4,6 +4,7 @@ from hanabi import create_app, db
 from hanabi.models import Game
 import json
 
+
 class APITestCase(unittest.TestCase):
     def setUp(self):
         self.app = create_app('testing')
@@ -27,13 +28,13 @@ class APITestCase(unittest.TestCase):
         game = Game.query.all()[0]
 
         # Make sure the user that created it is in the game
-        userID = response.headers.get('id')
-        self.assertEqual(game.players[0], userID)
+        user_id = response.headers.get('id')
+        self.assertEqual(game.players[0], user_id)
         self.assertEqual(len(game.players), 1)
 
         # Make sure the game has the right ID
-        gameID = url.split('/')[6]
-        self.assertEqual(game.id, int(gameID))
+        game_id = url.split('/')[6]
+        self.assertEqual(game.id, int(game_id))
 
         # Check that the game hasn't started
         self.assertFalse(game.started)
@@ -53,8 +54,8 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(response.status_code, 201)
 
         url = response.headers.get('Location')
-        gameID = url.split('/')[6]
-        game = Game.query.get(gameID)
+        game_id = url.split('/')[6]
+        game = Game.query.get(game_id)
         self.assertTrue(game.public)
 
         # Try to make a game with both variants set to true, public set to false
@@ -65,12 +66,11 @@ class APITestCase(unittest.TestCase):
         self.assertTrue(response.status_code == 201)
 
         url = response.headers.get('Location')
-        gameID = url.split('/')[6]
-        game = Game.query.get(gameID)
+        game_id = url.split('/')[6]
+        game = Game.query.get(game_id)
         self.assertFalse(game.public)
         self.assertTrue(game.perfectOrBust)
         self.assertFalse(game.rainbowIsColour)
-
 
     def test_join_game(self):
         """Should be able to join games"""
@@ -84,10 +84,9 @@ class APITestCase(unittest.TestCase):
         url = response.headers.get('Location')
         self.assertTrue('/api/v1/games/' in url)
 
-
         # Check that we're in the game
-        userID = response.headers.get('id')
-        self.assertEqual(userID, g.players[0])
+        user_id = response.headers.get('id')
+        self.assertEqual(user_id, g.players[0])
 
     def test_game_capacity(self):
         """Shouldn't be able to join a game with 5 players"""
@@ -112,12 +111,12 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(response.status_code, 500)
 
     def test_get_all_games(self):
-        "Shouldn't return private games or games that have already started"
+        """Shouldn't return private games or games that have already started"""
         # Make some games
-        normalGame = Game(public=True)
-        startedGame = Game(started=True)
-        privateGame = Game(public=False)
-        db.session.add_all([normalGame, startedGame, privateGame])
+        normal_game = Game(public=True)
+        started_game = Game(started=True)
+        private_game = Game(public=False)
+        db.session.add_all([normal_game, started_game, private_game])
         db.session.commit()
 
         # Try to get the games
@@ -159,10 +158,37 @@ class APITestCase(unittest.TestCase):
 
     def test_start_started_game(self):
         """Can't start a game that's started"""
-        game = Game(players=['id1','id2'], started=True)
+        game = Game(players=['id1', 'id2'], started=True)
         db.session.add(game)
         db.session.commit()
 
         response = self.client.put(url_for('api.start_game', id=1), headers={'id': 'id1'})
 
         self.assertEqual(response.status_code, 500)
+
+    def test_get_unauthorized_game(self):
+        """Can't GET a game you aren't in"""
+        game = Game(players=['id1', 'id2'])
+        db.session.add(game)
+        db.session.commit()
+
+        response = self.client.get(url_for('api.get_specific_game', id=1))
+
+        self.assertEqual(response.status_code, 403)
+
+        response = self.client.get(url_for('api.get_specific_game', id=1), headers={'id': 'id3'})
+
+        self.assertEqual(response.status_code, 403)
+
+    def test_get_rotated_game(self):
+        """If you GET a game, you are player[0]"""
+        game = Game(players=['id1', 'id2', 'id3', 'id4'], hands=['hand1', 'hand2', 'hand3', 'hand4'])
+        db.session.add(game)
+        db.session.commit()
+
+        response = self.client.get(url_for('api.get_specific_game', id=1), headers={'id': 'id3'})
+
+        self.assertEqual(response.status_code, 200)
+
+        json_response = json.loads(response.data.decode('utf-8'))
+        self.assertListEqual(json_response['hands'], ['hand3', 'hand4', 'hand1', 'hand2'])

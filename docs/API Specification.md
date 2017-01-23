@@ -16,6 +16,9 @@ Cards are represented as integers when in the deck, discard, or play. If c is a 
     + 4: yellow  
     + 5: rainbow  
 
+## Player Ordering
+You are always the player at index 0. Turns go in ascending order.
+
 ## POST /games/new  
 Body params (0 or more):
 * `public` (boolean) - whether the game is publicly listed on the main page. Default: `false`
@@ -48,8 +51,15 @@ Returns an array of pared down game objects:
 Games that have been started or are not public will not be shown.
 
 ## GET /games/:gameid
+Headers:
+* `id`: UUID of the user making the request
+
 Route params:
 * `:gameid`: the ID of the game
+
+### Responses
+* `200 OK`
+* `403 Forbidden` if the id header is missing or not in the game
 
 Returns a game object:  
 ```
@@ -74,7 +84,7 @@ Returns a game object:
 ### Fields:  
 * `url:` the url to the api endpoint for the game  
 * `discard:` dictionary of integer -> integer (see: card representation)
-* `hands:` array of arrays of cards  
+* `hands:` array of arrays of cards (see: player ordering)  
 * `hardMode:` whether the game is in hard mode (see: game options)
 * `deckSize:` number of cards remaining in the deck  
 * `turn:` index of player whose turn it is  
@@ -139,6 +149,7 @@ Body Params (discard or play):
 A move may be invalid if:
 * It is not your turn  
 * A hint does not match any cards in the players hand  
+* You try to hint yourself
 * Both colour and rank are specified for hints  
 * You try to hint about rainbow when rainbow is not treated as a colour  
 * You try to hint when there are no hint tokens  
