@@ -28,7 +28,7 @@ def newDeck(hardMode=False):
         for rank in [1, 1, 1, 2, 2, 3, 3, 4, 4, 5]:
             deck.append(10 * colour + rank)
 
-    if hardMode:
+    if not hardMode:
         for rank in [1, 1, 1, 2, 2, 3, 3, 4, 4, 5]:
             deck.append(50 + rank)
     else:
@@ -62,7 +62,7 @@ class Game(db.Model):
     turn = db.Column(db.SmallInteger, default=0)
 
     def __repr__(self):
-        return '<Game with %r players>' % len(self.players)
+        return '<Game %r>' % self.id
 
     def to_json(self):
         json_game = {

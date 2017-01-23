@@ -15,6 +15,7 @@ class GameModelTestCase(unittest.TestCase):
         self.app_context.pop()
 
     def test_to_json(self):
+        """Should return the relevant information"""
         g = Game()
         db.session.add(g)
         db.session.commit()
@@ -25,6 +26,38 @@ class GameModelTestCase(unittest.TestCase):
         self.assertEqual(sorted(json_game.keys()), sorted(expected_keys))
         self.assertTrue('api/v1/games/' in json_game['url'])
         self.assertFalse(json_game['started'])
-        self.assertTrue(json_game['turn'] == 0)
-        self.assertTrue(json_game['misfires'] == 3)
-        self.assertTrue(json_game['hints'] == 8)
+        self.assertEqual(json_game['turn'], 0)
+        self.assertEqual(json_game['misfires'], 3)
+        self.assertEqual(json_game['hints'], 8)
+
+    def test_start(self):
+        """Starting a game should work"""
+        g = Game()
+        g.players = ['id1', 'id2', 'id3', 'id4']
+
+        db.session.add(g)
+        db.session.commit()
+
+        g.start()
+        db.session.flush()
+
+        self.assertTrue(g.started)
+        self.assertTrue(all(map(lambda hand: len(hand) == 4, g.hands)))
+        self.assertEqual(len(g.deck), 44)
+
+
+
+    def test_start_with_three_players(self):
+        """Starting a game with three players should increase hand size"""
+        g = Game()
+        g.players = ['id1', 'id2', 'id3']
+
+        db.session.add(g)
+        db.session.commit()
+
+        g.start()
+        db.session.flush()
+
+        self.assertTrue(g.started)
+        self.assertTrue(all(map(lambda hand: len(hand) == 5, g.hands)))
+        self.assertEqual(len(g.deck), 45)

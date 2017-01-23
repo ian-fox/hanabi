@@ -20,7 +20,7 @@ class APITestCase(unittest.TestCase):
     def test_new_game(self):
         """Can make a new game with default settings"""
         response = self.client.post(url_for('api.new_game'))
-        self.assertTrue(response.status_code == 201)
+        self.assertEqual(response.status_code, 201)
         url = response.headers.get('Location')
         self.assertTrue('/api/v1/games/' in url)
 
@@ -28,17 +28,17 @@ class APITestCase(unittest.TestCase):
 
         # Make sure the user that created it is in the game
         userID = response.headers.get('id')
-        self.assertTrue(game.players[0] == userID)
-        self.assertTrue(len(game.players) == 1)
+        self.assertEqual(game.players[0], userID)
+        self.assertEqual(len(game.players), 1)
 
         # Make sure the game has the right ID
         gameID = url.split('/')[6]
-        self.assertTrue(game.id == int(gameID))
+        self.assertEqual(game.id, int(gameID))
 
         # Check that the game hasn't started
         self.assertFalse(game.started)
 
-        # Check other gamemodes
+        # Check other game modes
         self.assertFalse(game.hardMode)
         self.assertTrue(game.rainbowIsColour)
         self.assertFalse(game.perfectOrBust)
@@ -50,7 +50,7 @@ class APITestCase(unittest.TestCase):
             url_for('api.new_game'),
             headers={'Content-Type': 'application/json'},
             data=json.dumps({'public': True}))
-        self.assertTrue(response.status_code == 201)
+        self.assertEqual(response.status_code, 201)
 
         url = response.headers.get('Location')
         gameID = url.split('/')[6]
@@ -80,25 +80,25 @@ class APITestCase(unittest.TestCase):
         db.session.commit()
 
         response = self.client.put(url_for('api.join_game', id=g.id))
-        self.assertTrue(response.status_code == 200)
+        self.assertEqual(response.status_code, 200)
         url = response.headers.get('Location')
         self.assertTrue('/api/v1/games/' in url)
 
 
         # Check that we're in the game
         userID = response.headers.get('id')
-        self.assertTrue(userID == g.players[0])
+        self.assertEqual(userID, g.players[0])
 
     def test_game_capacity(self):
         """Shouldn't be able to join a game with 5 players"""
         # Create a new game
-        g = Game(players=[1,2,3,4,5])
+        g = Game(players=['id1', 'id2', 'id3', 'id4', 'id5'])
         db.session.add(g)
         db.session.commit()
 
         # Try to join
         response = self.client.put(url_for('api.join_game', id=g.id))
-        self.assertTrue(response.status_code == 500)
+        self.assertEqual(response.status_code, 500)
 
     def test_join_started_game(self):
         """Shouldn't be able to join a game that has started (in this release)"""
@@ -109,7 +109,7 @@ class APITestCase(unittest.TestCase):
 
         # Try to join
         response = self.client.put(url_for('api.join_game', id=g.id))
-        self.assertTrue(response.status_code == 500)
+        self.assertEqual(response.status_code, 500)
 
     def test_get_all_games(self):
         "Shouldn't return private games or games that have already started"
@@ -122,8 +122,47 @@ class APITestCase(unittest.TestCase):
 
         # Try to get the games
         response = self.client.get(url_for('api.get_games'))
-        self.assertTrue(response.status_code == 200)
+        self.assertEqual(response.status_code, 200)
 
         # We should get one result
         json_response = json.loads(response.data.decode('utf-8'))
-        self.assertTrue(len(json_response) == 1)
+        self.assertEqual(len(json_response), 1)
+
+    def test_start_game(self):
+        """Admin can start the game"""
+        game = Game(players=['id1', 'id2'])
+        db.session.add(game)
+        db.session.commit()
+
+        response = self.client.put(url_for('api.start_game', id=1), headers={'id': 'id1'})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(game.started)
+
+    def test_start_game_not_admin(self):
+        """Can't start the game if you don't authenticate as admin"""
+        game = Game(players=['id1', 'id2'])
+        db.session.add(game)
+        db.session.commit()
+
+        # No auth
+        response = self.client.put(url_for('api.start_game', id=1))
+
+        self.assertEqual(response.status_code, 403)
+        self.assertFalse(game.started)
+
+        # Wrong auth
+        response = self.client.put(url_for('api.start_game', id=1), headers={'id': 'id2'})
+
+        self.assertEqual(response.status_code, 403)
+        self.assertFalse(game.started)
+
+    def test_start_started_game(self):
+        """Can't start a game that's started"""
+        game = Game(players=['id1','id2'], started=True)
+        db.session.add(game)
+        db.session.commit()
+
+        response = self.client.put(url_for('api.start_game', id=1), headers={'id': 'id1'})
+
+        self.assertEqual(response.status_code, 500)
