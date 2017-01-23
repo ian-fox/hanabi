@@ -3,8 +3,10 @@ from enum import IntEnum
 from random import shuffle, randint
 from flask import url_for
 
+
 def rotate(array, offset):
     return array[-offset:] + array[:offset]
+
 
 class Colour(IntEnum):
     BLUE = 0
@@ -14,24 +16,26 @@ class Colour(IntEnum):
     YELLOW = 4
     RAINBOW = 5
 
+
 class Card:
-    def __init__(self, intRepresentation):
-        self.colour = Colour(intRepresentation // 10)
-        self.rank = intRepresentation % 10
+    def __init__(self, int_representation):
+        self.colour = Colour(int_representation // 10)
+        self.rank = int_representation % 10
         self.colourKnown = False
         self.rankKnown = False
 
-    def toNum(self):
+    def to_num(self):
         return 10 * self.colour.value + self.rank
 
-def newDeck(hardMode=False):
+
+def new_deck(hard_mode=False):
     """Return a full, shuffled deck in number form"""
     deck = []
     for colour in range(5):
         for rank in [1, 1, 1, 2, 2, 3, 3, 4, 4, 5]:
             deck.append(10 * colour + rank)
 
-    if not hardMode:
+    if not hard_mode:
         for rank in [1, 1, 1, 2, 2, 3, 3, 4, 4, 5]:
             deck.append(50 + rank)
     else:
@@ -40,6 +44,7 @@ def newDeck(hardMode=False):
 
     shuffle(deck)
     return deck
+
 
 class Game(db.Model):
     __tablename__ = 'games'
@@ -67,11 +72,11 @@ class Game(db.Model):
     def __repr__(self):
         return '<Game %r>' % self.id
 
-    def to_json(self, playerOffset=0):
+    def to_json(self, player_offset=0):
         json_game = {
-            'url': url_for('api.get_specific_game', id=self.id, _external=True),
+            'url': url_for('api.get_specific_game', game_id=self.id, _external=True),
             'discard': self.discard,
-            'hands': rotate(self.hands, playerOffset),
+            'hands': rotate(self.hands, player_offset),
             'hardMode': self.hardMode,
             'deckSize': len(self.deck),
             'turn': self.turn,
@@ -88,11 +93,11 @@ class Game(db.Model):
 
     def start(self):
         self.started = True
-        self.deck = newDeck(self.hardMode)
+        self.deck = new_deck(self.hardMode)
         self.turn = randint(0, len(self.players) - 1)
 
-        numCards = 5 if len(self.players) < 4 else 4
+        num_cards = 5 if len(self.players) < 4 else 4
         for i in range(len(self.players)):
             self.hands.append([])
-            for i in range(numCards):
+            for j in range(num_cards):
                 self.hands[-1].append(self.deck.pop())

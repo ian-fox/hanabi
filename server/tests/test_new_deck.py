@@ -1,10 +1,11 @@
 import unittest
-from hanabi.models import newDeck
+from hanabi.models import new_deck
+
 
 class NewDeckTestCase(unittest.TestCase):
     def test_new_deck(self):
         """Correctly generates a deck"""
-        d = newDeck()
+        d = new_deck()
 
         self.assertEqual(len(d), 60)
 
@@ -23,7 +24,7 @@ class NewDeckTestCase(unittest.TestCase):
 
     def test_new_hard_deck(self):
         """Correctly generates a hard deck"""
-        d = newDeck(True)
+        d = new_deck(True)
 
         self.assertEqual(len(d), 55)
 

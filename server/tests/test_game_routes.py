@@ -79,7 +79,7 @@ class APITestCase(unittest.TestCase):
         db.session.add(g)
         db.session.commit()
 
-        response = self.client.put(url_for('api.join_game', id=g.id))
+        response = self.client.put(url_for('api.join_game', game_id=g.id))
         self.assertEqual(response.status_code, 200)
         url = response.headers.get('Location')
         self.assertTrue('/api/v1/games/' in url)
@@ -96,7 +96,7 @@ class APITestCase(unittest.TestCase):
         db.session.commit()
 
         # Try to join
-        response = self.client.put(url_for('api.join_game', id=g.id))
+        response = self.client.put(url_for('api.join_game', game_id=g.id))
         self.assertEqual(response.status_code, 500)
 
     def test_join_started_game(self):
@@ -107,7 +107,7 @@ class APITestCase(unittest.TestCase):
         db.session.commit()
 
         # Try to join
-        response = self.client.put(url_for('api.join_game', id=g.id))
+        response = self.client.put(url_for('api.join_game', game_id=g.id))
         self.assertEqual(response.status_code, 500)
 
     def test_get_all_games(self):
@@ -133,7 +133,7 @@ class APITestCase(unittest.TestCase):
         db.session.add(game)
         db.session.commit()
 
-        response = self.client.put(url_for('api.start_game', id=1), headers={'id': 'id1'})
+        response = self.client.put(url_for('api.start_game', game_id=1), headers={'id': 'id1'})
 
         self.assertEqual(response.status_code, 200)
         self.assertTrue(game.started)
@@ -145,13 +145,13 @@ class APITestCase(unittest.TestCase):
         db.session.commit()
 
         # No auth
-        response = self.client.put(url_for('api.start_game', id=1))
+        response = self.client.put(url_for('api.start_game', game_id=1))
 
         self.assertEqual(response.status_code, 403)
         self.assertFalse(game.started)
 
         # Wrong auth
-        response = self.client.put(url_for('api.start_game', id=1), headers={'id': 'id2'})
+        response = self.client.put(url_for('api.start_game', game_id=1), headers={'id': 'id2'})
 
         self.assertEqual(response.status_code, 403)
         self.assertFalse(game.started)
@@ -162,7 +162,7 @@ class APITestCase(unittest.TestCase):
         db.session.add(game)
         db.session.commit()
 
-        response = self.client.put(url_for('api.start_game', id=1), headers={'id': 'id1'})
+        response = self.client.put(url_for('api.start_game', game_id=1), headers={'id': 'id1'})
 
         self.assertEqual(response.status_code, 500)
 
@@ -172,11 +172,11 @@ class APITestCase(unittest.TestCase):
         db.session.add(game)
         db.session.commit()
 
-        response = self.client.get(url_for('api.get_specific_game', id=1))
+        response = self.client.get(url_for('api.get_specific_game', game_id=1))
 
         self.assertEqual(response.status_code, 403)
 
-        response = self.client.get(url_for('api.get_specific_game', id=1), headers={'id': 'id3'})
+        response = self.client.get(url_for('api.get_specific_game', game_id=1), headers={'id': 'id3'})
 
         self.assertEqual(response.status_code, 403)
 
@@ -186,7 +186,7 @@ class APITestCase(unittest.TestCase):
         db.session.add(game)
         db.session.commit()
 
-        response = self.client.get(url_for('api.get_specific_game', id=1), headers={'id': 'id3'})
+        response = self.client.get(url_for('api.get_specific_game', game_id=1), headers={'id': 'id3'})
 
         self.assertEqual(response.status_code, 200)
 

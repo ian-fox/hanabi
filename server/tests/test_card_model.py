@@ -1,6 +1,7 @@
 import unittest
 from hanabi.models import Card, Colour
 
+
 class CardModelTestCase(unittest.TestCase):
     def test_conversion_from_int(self):
         """Correctly converts from integer to card"""
