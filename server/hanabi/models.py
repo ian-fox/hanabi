@@ -1,6 +1,6 @@
 from . import db
 from enum import IntEnum
-from random import shuffle
+from random import shuffle, randint
 from flask import url_for
 
 class Colour(IntEnum):
@@ -10,12 +10,6 @@ class Colour(IntEnum):
     WHITE = 3
     YELLOW = 4
     RAINBOW = 5
-
-
-class Hand:
-    def __init__(self, player):
-        self.cards = []
-        self.player = player
 
 class Card:
     def __init__(self, intRepresentation):
@@ -88,3 +82,14 @@ class Game(db.Model):
             'hints': self.hints
         }
         return json_game
+
+    def start(self):
+        self.started = True
+        self.deck = newDeck(self.hardMode)
+        self.turn = randint(0, len(self.players) - 1)
+
+        numCards = 5 if len(self.players) < 4 else 4
+        for i in range(len(self.players)):
+            self.hands.append([])
+            for i in range(numCards):
+                self.hands[-1].append(self.deck.pop())

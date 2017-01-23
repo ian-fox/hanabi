@@ -59,7 +59,7 @@ Returns a game object:
 ### Fields:  
 * `url:` the url to the api endpoint for the game  
 * `discard:` dictionary of integer -> integer (see: card representation)
-* `hands:` array of hand objects  
+* `hands:` array of arrays of cards  
 * `hardMode:` whether the game is in hard mode (see: game options)
 * `deckSize:` number of cards remaining in the deck  
 * `turn:` index of player whose turn it is  

@@ -45,20 +45,44 @@ def get_specific_game(id):
 
 @api.route('/games/<int:id>/join', methods=['PUT'])
 def join_game(id):
-    game = Game.query.get(id)
-
-    if not game:
-        return jsonify({'error': 'not found'}), 404
+    game = Game.query.get_or_404(id)
 
     # Can't have more than 5 players, can't join a game that's started already (yet)
-    if len(game.players) == 5 or game.started:
-        return jsonify({'error': 'game is full or has started'}), 500
+    if len(game.players) == 5:
+        return jsonify({'error': 'game is full'}), 500
+
+    if game.started:
+        return jsonify({'error': 'game has already started'}), 500
 
     newID = uuid4().hex
-    db.session.add(game)
     game.players.append(newID)
+    db.session.add(game)
     db.session.flush()
 
     return jsonify(game.to_json()), 200, \
            {'Location': url_for('api.get_specific_game', id=game.id, _external=True),
             'id': newID}
+
+@api.route('/games/<int:id>/start', methods=['PUT'])
+def start_game(id):
+    game = Game.query.get_or_404(id)
+
+    # No point starting a game with one player, or that's already started
+    if len(game.players) < 2:
+        return jsonify({'error': 'cannot start game with one player'}), 500
+
+    if game.started:
+        return jsonify({'error': 'game already in progress'}), 500
+
+    # Must be admin to start the game
+    requestID = request.headers.get('id')
+    if (requestID != game.players[0]):
+        return jsonify({'error': 'must be admin to start the game'}), 403
+
+    # Start the game
+    game.start()
+    db.session.add(game)
+    db.session.flush()
+
+    return jsonify(game.to_json()), 200, \
+           {'Location': url_for('api.get_specific_game', id=game.id, _external=True)}
