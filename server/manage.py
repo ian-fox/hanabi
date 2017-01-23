@@ -7,7 +7,7 @@ from flask_script import Manager, Shell
 COV = None
 if os.environ.get('FLASK_COVERAGE'):
     import coverage
-    COV = coverage.coverage(branch=True, include='hanabi/*')
+    COV = coverage.coverage(branch=True, include='hanabi/*', omit='hanabi/config.py')
     COV.start()
 
 app = create_app(os.getenv('FLASK_CONFIG') or 'default')
