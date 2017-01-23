@@ -48,6 +48,9 @@ Returns an array of pared down game objects:
 Games that have been started or are not public will not be shown.
 
 ## GET /games/:gameid
+Route params:
+* `:gameid`: the ID of the game
+
 Returns a game object:  
 ```
 {  
@@ -85,7 +88,8 @@ Returns a game object:
 * `hints:` number of remaining hints (8 = all hints, 0 = no hints)
 
 ## PUT /games/:gameid/join
-Body params (one or more):
+Route params:
+* `:gameid`: the ID of the game
 
 ### Responses
 * `200 OK`
@@ -99,9 +103,43 @@ If response was OK, returns the following headers:
 Headers:
 * `id`: UUID of the user making the request (must match that of the admin of the game)
 
+Route params:
+* `:gameid`: the ID of the game
+
 Starts the game (deals hands, chooses random player to start).
 
 ### Responses
 * `200 OK`
 * `403 Only admin can start the game`
 * `500 Cannot start with one player or game in progress`
+
+## PUT /games/:gameid/action
+Headers:
+* `id`: UUID of the user making the request (must match player whose turn it is)
+
+Route params:
+* `:gameid`: the ID of the game
+
+Body Params (all requests):
+* `type` (integer) - 0 for hint, 1 for play, 2 for discard  
+
+Body Params (hints):
+* `playerIndex` (integer) - index of the player you want to hint
+* `colour` (integer) - the colour you want to hint about
+* `rank` (integer) - the rank you want to hint about
+`colour` and `rank` are mutually exclusive
+
+Body Params (discard or play):
+* `cardIndex` (integer) - index of the card you want to discard or play
+
+### Responses
+* `200 OK`
+* `500 Invalid move`
+
+A move may be invalid if:
+* It is not your turn  
+* A hint does not match any cards in the players hand  
+* Both colour and rank are specified for hints  
+* You try to hint about rainbow when rainbow is not treated as a colour  
+* You try to hint when there are no hint tokens  
+* You try to discard when there are 8 hint tokens  
