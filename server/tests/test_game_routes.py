@@ -468,7 +468,7 @@ class APITestCase(unittest.TestCase):
             data=json.dumps({'type': 'hint', 'colour': 'blue', 'playerIndex': 1}))
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(game.hints, 7)
+        self.assertEqual(game.hints, 6)
         self.assertFalse(game.hands[1][0].known_rank)
         self.assertFalse(game.hands[1][1].known_rank)
         self.assertEqual(game.hands[1][0].known_colour, Colour.BLUE)
@@ -485,7 +485,7 @@ class APITestCase(unittest.TestCase):
             data=json.dumps({'type': 'hint', 'colour': 'green', 'playerIndex': 1}))
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(game.hints, 6)
+        self.assertEqual(game.hints, 5)
         self.assertFalse(game.hands[1][0].known_rank)
         self.assertFalse(game.hands[1][1].known_rank)
         self.assertEqual(game.hands[1][0].known_colour, Colour.RAINBOW)
