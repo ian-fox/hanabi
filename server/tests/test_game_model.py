@@ -1,6 +1,7 @@
 import unittest
 
 from hanabi import create_app, db
+from hanabi.exceptions import CannotJoinGame, CannotStartGame
 from hanabi.models import Game
 
 
@@ -43,9 +44,7 @@ class GameModelTestCase(unittest.TestCase):
 
     def test_start(self):
         """Starting a game should work"""
-        g = Game()
-        g.players = ['id1', 'id2', 'id3', 'id4']
-
+        g = Game(players=['id1', 'id2', 'id3', 'id4'])
         db.session.add(g)
         db.session.commit()
 
@@ -56,11 +55,29 @@ class GameModelTestCase(unittest.TestCase):
         self.assertTrue(all(map(lambda hand: len(hand) == 4, g.hands)))
         self.assertEqual(len(g.deck), 44)
 
+    def test_start_with_one_player(self):
+        """Can't start a game with one player"""
+        g = Game(players=['id1'])
+        db.session.add(g)
+        db.session.commit()
+
+        self.assertRaises(CannotStartGame, g.start)
+
+        db.session.flush()
+
+        self.assertFalse(g.started)
+
+    def test_start_started_game(self):
+        """Can't start a game that's already started"""
+        g = Game(started=True)
+        db.session.add(g)
+        db.session.commit()
+
+        self.assertRaises(CannotStartGame, g.start)
+
     def test_start_with_three_players(self):
         """Starting a game with three players should increase hand size"""
-        g = Game()
-        g.players = ['id1', 'id2', 'id3']
-
+        g = Game(players=['id1', 'id2', 'id3'])
         db.session.add(g)
         db.session.commit()
 
@@ -70,3 +87,37 @@ class GameModelTestCase(unittest.TestCase):
         self.assertTrue(g.started)
         self.assertTrue(all(map(lambda hand: len(hand) == 5, g.hands)))
         self.assertEqual(len(g.deck), 45)
+
+    def test_add_player(self):
+        """Add a new player to the game"""
+        g = Game(players=['id1', 'id2'])
+        db.session.add(g)
+        db.session.commit()
+
+        new_id = g.add_player()
+
+        db.session.flush()
+
+        self.assertListEqual(g.players, ['id1', 'id2', new_id])
+
+    def test_add_player_game_started(self):
+        """Can't add a player if the game is started"""
+        g = Game(players=['id1', 'id2'], started=True)
+        db.session.add(g)
+        db.session.commit()
+
+        self.assertRaises(CannotJoinGame, g.add_player)
+
+        db.session.flush()
+        self.assertEqual(len(g.players), 2)
+
+    def test_add_sixth_player(self):
+        """Can't add a player if the game is started"""
+        g = Game(players=['id1', 'id2', 'id3', 'id4', 'id5'], started=True)
+        db.session.add(g)
+        db.session.commit()
+
+        self.assertRaises(CannotJoinGame, g.add_player)
+
+        db.session.flush()
+        self.assertEqual(len(g.players), 5)
