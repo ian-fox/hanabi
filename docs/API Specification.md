@@ -131,7 +131,7 @@ Route params:
 * `:gameid`: the ID of the game
 
 Body Params (all requests):
-* `type` (integer) - 0 for hint, 1 for play, 2 for discard  
+* `type` (string) - one of `hint`, `play`, or `discard`  
 
 Body Params (hints):
 * `playerIndex` (integer) - index of the player you want to hint
@@ -144,6 +144,8 @@ Body Params (discard or play):
 
 ### Responses
 * `200 OK`
+* `400 Badly Formed Request` (request doesn't conform to spec)
+* `403 Unauthorized` (player id is not included or not in the game)
 * `500 Invalid move`
 
 A move may be invalid if:

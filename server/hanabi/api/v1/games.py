@@ -2,6 +2,7 @@ from . import api
 from flask import jsonify, url_for, request
 from hanabi import db
 from hanabi.models import Game
+from hanabi.Exceptions import CannotJoinGame
 from uuid import uuid4
 
 
@@ -25,21 +26,27 @@ def get_games():
 @api.route('/games/new', methods=['POST'])
 def new_game():
     admin_id = uuid4().hex
-    json = request.get_json()
-    hard_mode = json and 'hardMode' in json.keys() and bool(json['hardMode'])
-    perfect_or_bust = json and 'perfectOrBust' in json.keys() and bool(json['perfectOrBust'])
-    rainbow_is_colour = not (json and 'rainbowIsColour' in json.keys() and not bool(json['rainbowIsColour']))
-    public = json and 'public' in json.keys() and bool(json['public'])
-    newgame = Game(
+    json = request.get_json() or {}
+
+    hard_mode = json.get('hardMode') or False
+    perfect_or_bust = json.get('perfectOrBust') or False
+    rainbow_is_colour = json.get('rainbowIsColour')
+    if rainbow_is_colour is None:
+        rainbow_is_colour = True
+    public = json.get('public')
+
+    new_game_object = Game(
         players=[admin_id],
         perfectOrBust=perfect_or_bust,
         rainbowIsColour=rainbow_is_colour,
         hardMode=hard_mode,
         public=public)
-    db.session.add(newgame)
+
+    db.session.add(new_game_object)
     db.session.commit()
-    return jsonify(newgame.to_json()), 201, \
-        {'Location': url_for('api.get_specific_game', game_id=newgame.id, _external=True),
+
+    return jsonify(new_game_object.to_json()), 201, \
+        {'Location': url_for('api.get_specific_game', game_id=new_game_object.id, _external=True),
             'id': admin_id}
 
 
@@ -59,21 +66,16 @@ def get_specific_game(game_id):
 def join_game(game_id):
     game = Game.query.get_or_404(game_id)
 
-    # Can't have more than 5 players, can't join a game that's started already (yet)
-    if len(game.players) == 5:
-        return jsonify({'error': 'game is full'}), 500
+    try:
+        new_id = game.add_player()
+        db.session.add(game)
+        db.session.flush()
 
-    if game.started:
-        return jsonify({'error': 'game has already started'}), 500
-
-    new_id = uuid4().hex
-    game.players.append(new_id)
-    db.session.add(game)
-    db.session.flush()
-
-    return jsonify(game.to_json()), 200, \
-        {'Location': url_for('api.get_specific_game', game_id=game.id, _external=True),
-            'id': new_id}
+        return jsonify(game.to_json()), 200, \
+            {'Location': url_for('api.get_specific_game', game_id=game.id, _external=True),
+                'id': new_id}
+    except CannotJoinGame as c:
+        return jsonify({'error': str(c)}), 500
 
 
 @api.route('/games/<int:game_id>/start', methods=['PUT'])
@@ -99,3 +101,36 @@ def start_game(game_id):
 
     return jsonify(game.to_json()), 200, \
         {'Location': url_for('api.get_specific_game', game_id=game.id, _external=True)}
+
+
+@api.route('/games/<int:game_id>/action', methods=['PUT'])
+def game_action(game_id):
+    game = Game.query.get_or_404(game_id)
+
+    # Check that the player is in the game
+    player_id = request.headers.get('id')
+    if player_id not in game.players:
+        return jsonify({'error': 'id missing or not in game'}), 403
+
+    # Check that it's their turn
+    if game.turn != game.players.index(player_id):
+        return jsonify({'error': 'not your turn'}), 500
+
+    # Parse json
+    json = request.get_json()
+    if not json:
+        return jsonify({'error': 'no move object sent'}), 400
+
+    move_type = json.get('type')
+
+    if move_type == 'hint':
+        # hint logic goes here
+        pass
+    elif move_type == 'play':
+        # play logic goes here
+        pass
+    elif move_type == 'discard':
+        # discard logic goes here
+        pass
+    else:
+        return jsonify({'error': 'missing move type'}), 400

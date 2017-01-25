@@ -1,7 +1,9 @@
-from . import db
+from hanabi import db
 from enum import IntEnum
 from random import shuffle, randint
 from flask import url_for
+from hanabi.Exceptions import CannotJoinGame
+from uuid import uuid4
 
 
 def rotate(array, offset):
@@ -15,6 +17,17 @@ class Colour(IntEnum):
     WHITE = 3
     YELLOW = 4
     RAINBOW = 5
+
+
+class MoveType(IntEnum):
+    HINT = 0
+    PLAY = 1
+    DISCARD = 2
+
+
+class HintType(IntEnum):
+    COLOUR = 0
+    RANK = 1
 
 
 class Card:
@@ -72,6 +85,21 @@ class Game(db.Model):
     def __repr__(self):
         return '<Game %r>' % self.id
 
+    def add_player(self):
+        """Add a new player to the game and return their ID"""
+
+        # Can't have more than 5 players, can't join a game that's started already (yet)
+        if len(self.players) == 5:
+            raise CannotJoinGame("Game at capacity")
+
+        if self.started:
+            raise CannotJoinGame("Game already in progress")
+
+        new_id = uuid4().hex
+        self.players.append(new_id)
+
+        return new_id
+
     def to_json(self, player_offset=0):
         json_game = {
             'url': url_for('api.get_specific_game', game_id=self.id, _external=True),
@@ -101,3 +129,12 @@ class Game(db.Model):
             self.hands.append([])
             for j in range(num_cards):
                 self.hands[-1].append(self.deck.pop())
+
+    def hint(self, player, type, attribute):
+        self.hints -= 1
+        for card in self.hands[self.player]:
+            if card.colour == attribute and type == HintType.COLOUR:
+                card.colourKnown = True
+
+    def play_or_discard(self, player, index, type):
+        pass
