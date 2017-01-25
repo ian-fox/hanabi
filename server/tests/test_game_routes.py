@@ -281,7 +281,7 @@ class APITestCase(unittest.TestCase):
         db.session.add(game)
         db.session.commit()
 
-        # Player 1 hints player 2 about rainbow
+        # Player 1 tries to hint player 2
         response = self.client.put(
             url_for('api.make_move', game_id=1),
             headers={'Content-Type': 'application/json', 'id': 'id1'},
@@ -294,3 +294,183 @@ class APITestCase(unittest.TestCase):
         self.assertIsNone(game.hands[1][1].known_colour)
         self.assertEqual(game.hints, 0)
         self.assertEqual(game.turn, 0)
+
+    def test_discard_with_eight_hints(self):
+        """Try to discard with eight hints"""
+        game = Game(players=['id1', 'id2'], started=True, turn=0, hints=8,
+                    deck=[5, 4, 3, 2, 1],  # Blue 1 through 5
+                    hands=[[Card(1), Card(2)],  # Blue 1, 2
+                           [Card(51), Card(42)]])  # Rainbow 1, Yellow 2
+        db.session.add(game)
+        db.session.commit()
+
+        # Player 1 tries to discard
+        response = self.client.put(
+            url_for('api.make_move', game_id=1),
+            headers={'Content-Type': 'application/json', 'id': 'id1'},
+            data=json.dumps({'type': 'discard', 'cardIndex': 0}))
+
+        self.assertEqual(response.status_code, 500)
+        self.assertEqual(game.hands[0][0].rank, 1)
+        self.assertEqual(game.hands[0][1].rank, 2)
+        self.assertEqual(game.hints, 8)
+        self.assertEqual(game.turn, 0)
+
+    def test_bad_hints(self):
+        """Try to hint about both colour and rank, hint that does'nt match any cards, and hint with no hint"""
+        game = Game(players=['id1', 'id2'], started=True, turn=0, hints=8,
+                    deck=[5, 4, 3, 2, 1],  # Blue 1 through 5
+                    hands=[[Card(1), Card(2)],  # Blue 1, 2
+                           [Card(51), Card(42)]])  # Rainbow 1, Yellow 2
+        db.session.add(game)
+        db.session.commit()
+
+        # Player 1 tries to hint about two things
+        response = self.client.put(
+            url_for('api.make_move', game_id=1),
+            headers={'Content-Type': 'application/json', 'id': 'id1'},
+            data=json.dumps({'type': 'hint', 'colour': 'rainbow', 'rank': 2, 'playerIndex': 1}))
+
+        self.assertEqual(response.status_code, 500)
+        self.assertEqual(game.hints, 8)
+        self.assertFalse(game.hands[1][0].known_rank)
+        self.assertFalse(game.hands[1][1].known_rank)
+        self.assertIsNone(game.hands[1][0].known_colour)
+        self.assertIsNone(game.hands[1][1].known_colour)
+        self.assertEqual(game.turn, 0)
+
+        # Player 1 tries to hint about a card that isn't there
+        response = self.client.put(
+            url_for('api.make_move', game_id=1),
+            headers={'Content-Type': 'application/json', 'id': 'id1'},
+            data=json.dumps({'type': 'hint', 'colour': 'green', 'playerIndex': 1}))
+
+        self.assertEqual(response.status_code, 500)
+        self.assertEqual(game.hints, 8)
+        self.assertFalse(game.hands[1][0].known_rank)
+        self.assertFalse(game.hands[1][1].known_rank)
+        self.assertIsNone(game.hands[1][0].known_colour)
+        self.assertIsNone(game.hands[1][1].known_colour)
+        self.assertEqual(game.turn, 0)
+
+        # Player 1 tries to hint about nothing
+        response = self.client.put(
+            url_for('api.make_move', game_id=1),
+            headers={'Content-Type': 'application/json', 'id': 'id1'},
+            data=json.dumps({'type': 'hint', 'playerIndex': 1}))
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(game.hints, 8)
+        self.assertEqual(game.turn, 0)
+
+    def test_move_not_your_turn(self):
+        """Try to do something when it isn't your turn"""
+        game = Game(players=['id1', 'id2'], started=True, turn=0, hints=8,
+                    deck=[5, 4, 3, 2, 1],  # Blue 1 through 5
+                    hands=[[Card(1), Card(2)],  # Blue 1, 2
+                           [Card(51), Card(42)]])  # Rainbow 1, Yellow 2
+        db.session.add(game)
+        db.session.commit()
+
+        # Player 1 tries to hint about two things
+        response = self.client.put(
+            url_for('api.make_move', game_id=1),
+            headers={'Content-Type': 'application/json', 'id': 'id2'},
+            data=json.dumps({'type': 'hint', 'colour': 'rainbow', 'rank': 2, 'playerIndex': 1}))
+
+        self.assertEqual(response.status_code, 500)
+        self.assertEqual(game.hints, 8)
+        self.assertFalse(game.hands[1][0].known_rank)
+        self.assertFalse(game.hands[1][1].known_rank)
+        self.assertIsNone(game.hands[1][0].known_colour)
+        self.assertIsNone(game.hands[1][1].known_colour)
+        self.assertEqual(game.turn, 0)
+
+    def test_play_with_no_index(self):
+        """Try to play a card but don't say which"""
+        game = Game(players=['id1', 'id2'], started=True, turn=0, hints=8,
+                    deck=[5, 4, 3, 2, 1],  # Blue 1 through 5
+                    hands=[[Card(1), Card(2)],  # Blue 1, 2
+                           [Card(51), Card(42)]])  # Rainbow 1, Yellow 2
+        db.session.add(game)
+        db.session.commit()
+
+        # Player 1 tries to discard
+        response = self.client.put(
+            url_for('api.make_move', game_id=1),
+            headers={'Content-Type': 'application/json', 'id': 'id1'},
+            data=json.dumps({'type': 'play'}))
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(game.hands[0][0].rank, 1)
+        self.assertEqual(game.hands[0][1].rank, 2)
+        self.assertEqual(game.hints, 8)
+        self.assertEqual(game.turn, 0)
+
+    def test_move_with_no_move(self):
+        """Try to do something but don't say what"""
+        game = Game(players=['id1', 'id2'], started=True, turn=0)
+        db.session.add(game)
+        db.session.commit()
+
+        # Player 1 tries to discard
+        response = self.client.put(
+            url_for('api.make_move', game_id=1),
+            headers={'Content-Type': 'application/json', 'id': 'id1'})
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(game.turn, 0)
+
+    def test_chameleon_mode(self):
+        """Can't hint about rainbow, hinting about a colour tells about rainbow"""
+        game = Game(players=['id1', 'id2'], started=True, turn=0, hints=8, chameleon_mode=True,
+                    deck=[5, 4, 3, 2, 1],  # Blue 1 through 5
+                    hands=[[Card(1), Card(2)],  # Blue 1, 2
+                           [Card(51), Card(42)]])  # Rainbow 1, Yellow 2
+        db.session.add(game)
+        db.session.commit()
+
+        # Player 1 tries to hint about a rainbow card
+        response = self.client.put(
+            url_for('api.make_move', game_id=1),
+            headers={'Content-Type': 'application/json', 'id': 'id1'},
+            data=json.dumps({'type': 'hint', 'colour': 'rainbow', 'playerIndex': 1}))
+
+        self.assertEqual(response.status_code, 500)
+        self.assertEqual(game.hints, 8)
+        self.assertFalse(game.hands[1][0].known_rank)
+        self.assertFalse(game.hands[1][1].known_rank)
+        self.assertIsNone(game.hands[1][0].known_colour)
+        self.assertIsNone(game.hands[1][1].known_colour)
+        self.assertEqual(game.turn, 0)
+
+        # Player one hints about blue
+        response = self.client.put(
+            url_for('api.make_move', game_id=1),
+            headers={'Content-Type': 'application/json', 'id': 'id1'},
+            data=json.dumps({'type': 'hint', 'colour': 'blue', 'playerIndex': 1}))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(game.hints, 7)
+        self.assertFalse(game.hands[1][0].known_rank)
+        self.assertFalse(game.hands[1][1].known_rank)
+        self.assertEqual(game.hands[1][0].known_colour, Colour.BLUE)
+        self.assertIsNone(game.hands[1][1].known_colour)
+        self.assertEqual(game.turn, 1)
+
+        game.turn = 0
+        db.session.flush()
+
+        # Player one hints about green
+        response = self.client.put(
+            url_for('api.make_move', game_id=1),
+            headers={'Content-Type': 'application/json', 'id': 'id1'},
+            data=json.dumps({'type': 'hint', 'colour': 'green', 'playerIndex': 1}))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(game.hints, 6)
+        self.assertFalse(game.hands[1][0].known_rank)
+        self.assertFalse(game.hands[1][1].known_rank)
+        self.assertEqual(game.hands[1][0].known_colour, Colour.RAINBOW)
+        self.assertIsNone(game.hands[1][1].known_colour)
+        self.assertEqual(game.turn, 1)
