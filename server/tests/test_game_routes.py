@@ -461,6 +461,23 @@ class APITestCase(unittest.TestCase):
         game.turn = 0
         db.session.flush()
 
+        # Player one hints about blue again
+        response = self.client.put(
+            url_for('api.make_move', game_id=1),
+            headers={'Content-Type': 'application/json', 'id': 'id1'},
+            data=json.dumps({'type': 'hint', 'colour': 'blue', 'playerIndex': 1}))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(game.hints, 7)
+        self.assertFalse(game.hands[1][0].known_rank)
+        self.assertFalse(game.hands[1][1].known_rank)
+        self.assertEqual(game.hands[1][0].known_colour, Colour.BLUE)
+        self.assertIsNone(game.hands[1][1].known_colour)
+        self.assertEqual(game.turn, 1)
+
+        game.turn = 0
+        db.session.flush()
+
         # Player one hints about green
         response = self.client.put(
             url_for('api.make_move', game_id=1),

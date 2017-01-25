@@ -124,7 +124,7 @@ class Game(db.Model):
 
                 if self.chameleon_mode and card.colour == Colour.RAINBOW:
                     hinted_a_card = True
-                    if card.known_colour is None:
+                    if card.known_colour is None or card.known_colour == move.hint_colour:
                         card.known_colour = move.hint_colour
                     else:
                         # Making the assumption they can figure out that if a card is red and green, it's rainbow
