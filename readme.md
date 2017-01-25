@@ -8,7 +8,7 @@ This is a project to create an online version.
 [This](https://trello.com/b/2FwsnZ7n/scrum) is what I'm working on right now. If you have suggestions, please let me know here or email me at [ianfox97@gmail.com](mailto:ianfox97@gmail.com)!
 
 ## v1.0 Released!
-The server is functional! Stay tuned for the following features in 1.1:
+The server is functional! Next step is a client, but after that these changes will come with server 1.1:
 * Users get notified of game updates with server-sent events (no more polling required!)
 * History of moves  
 * Player nicknames  
