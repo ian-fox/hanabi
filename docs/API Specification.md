@@ -73,6 +73,7 @@ Returns a game object:
 {  
   url: string,  
   discard: dict,  
+  finalScore: integer or null,  
   hands: array,  
   hardMode: boolean,  
   deckSize: integer,  
@@ -91,6 +92,7 @@ Returns a game object:
 ### Fields:  
 * `url:` the url to the api endpoint for the game  
 * `discard:` dictionary of integer -> integer (see: card representation)
+* `finalScore:` the final score once the game has finished, `null` while game in progress
 * `hands:` array of arrays of cards (see: player ordering)  
 * `hardMode:` whether the game is in hard mode (see: game options)
 * `deckSize:` number of cards remaining in the deck  

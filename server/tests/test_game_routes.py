@@ -242,7 +242,7 @@ class APITestCase(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(game.misfires, 3)
-        self.assertEqual(game.inPlay[Colour.BLUE], 1)
+        self.assertEqual(game.in_play[Colour.BLUE], 1)
         self.assertEqual(len(game.deck), 4)
         self.assertListEqual(list(map(lambda card: card.to_num(), game.hands[0])), [2, 1])  # Picked up another blue 1
         self.assertEqual(game.turn, 1)
@@ -255,7 +255,7 @@ class APITestCase(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(game.misfires, 2)
-        self.assertEqual(game.inPlay[Colour.YELLOW], 0)
+        self.assertEqual(game.in_play[Colour.YELLOW], 0)
         self.assertListEqual(game.discard[Colour.YELLOW], [2])
         self.assertEqual(len(game.deck), 3)
         self.assertListEqual(list(map(lambda card: card.to_num(), game.hands[1])), [51, 2])  # Picked up a blue 2
