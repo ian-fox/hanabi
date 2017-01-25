@@ -16,15 +16,21 @@ Cards are represented as integers when in the deck, discard, or play. If c is a 
     + 4: yellow  
     + 5: rainbow  
 
+In a player's hand, it is an object with the following fields:
+* `colour` (integer) - same as above
+* `rank` (integer)
+* `knownColour` (integer) - null or a colour, as above
+* `knownRank` (boolean) - whether or not they know the rank
+
 ## Player Ordering
 You are always the player at index 0. Turns go in ascending order.
 
 ## POST /games/new  
 Body params (0 or more):
 * `public` (boolean) - whether the game is publicly listed on the main page. Default: `false`
-* `rainbowIsColour` (boolean) - whether to treat rainbow as its own colour. Default: `true`
+* `chameleonMode` (boolean) - whether rainbow cards are special. Default: `false`
 * `hardMode` (boolean) - whether there is only one of each rainbow card. Default: `false`
-* `perfectOrBust` (boolean) - whether the game should be scored in binary (you reached 30 or you didn't). Default: `false`  
+* `perfectMode` (boolean) - whether the game should be scored in binary (you reached 30 or you didn't). Default: `false`  
 
 For more information on the latter three options see "Game Options" in the functional spec.
 
@@ -42,7 +48,7 @@ Returns an array of pared down game objects:
 {
   id: '12345',  
   players: 2,
-  perfectOrBust: false,
+  perfectMode: false,
   rainbowIsColour: false,
   hardMode: false,
   url: 'url to game object api endpoint'
@@ -72,7 +78,7 @@ Returns a game object:
   turn: integer,  
   started: boolean,  
   rainbowIsColour: boolean,  
-  perfectOrBust: boolean,  
+  perfectMode: boolean,  
   inPlay: dict,  
   lastTurn: boolean,  
   lastPlayer: integer or null,  
@@ -90,7 +96,7 @@ Returns a game object:
 * `turn:` index of player whose turn it is  
 * `started:` whether the game has started  
 * `rainbowIsColour:` whether rainbow counts as its own colour (see: game options)  
-* `perfectOrBust:` whether the game is in binary scoring mode (see: game options)  
+* `perfectMode:` whether the game is in binary scoring mode (see: game options)  
 * `inPlay:` dictionary of integer -> integer (see: card representation)  
 * `lastTurn:` whether or not it is the last turn (see: game options)
 * `lastPlayer:` index of the last player to get a turn if lastTurn is true, null otherwise  

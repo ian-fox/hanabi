@@ -1,8 +1,8 @@
 from . import api
 from flask import jsonify, url_for, request
 from hanabi import db
-from hanabi.models import Game
-from hanabi.Exceptions import CannotJoinGame, CannotStartGame
+from hanabi.models import Game, Move
+from hanabi.Exceptions import CannotJoinGame, CannotStartGame, InvalidMove
 from uuid import uuid4
 
 
@@ -10,9 +10,9 @@ def game_summary(game):
     """The all games list only needs some information, not all"""
     return {
         'url': url_for('api.get_specific_game', game_id=game.id, _external=True),
-        'rainbowIsColour': game.rainbowIsColour,
-        'perfectOrBust': game.perfectOrBust,
-        'hardMode': game.hardMode,
+        'chameleonMode': game.chameleon_mode,
+        'perfectMode': game.perfect_mode,
+        'hardMode': game.hard_mode,
         'players': len(game.players)
     }
 
@@ -29,17 +29,15 @@ def new_game():
     json = request.get_json() or {}
 
     hard_mode = json.get('hardMode') or False
-    perfect_or_bust = json.get('perfectOrBust') or False
-    rainbow_is_colour = json.get('rainbowIsColour')
-    if rainbow_is_colour is None:
-        rainbow_is_colour = True
+    perfect_mode = json.get('perfectMode') or False
+    chameleon_mode = json.get('chameleonMode') or False
     public = json.get('public')
 
     new_game_object = Game(
         players=[admin_id],
-        perfectOrBust=perfect_or_bust,
-        rainbowIsColour=rainbow_is_colour,
-        hardMode=hard_mode,
+        perfect_mode=perfect_mode,
+        chameleon_mode=chameleon_mode,
+        hard_mode=hard_mode,
         public=public)
 
     db.session.add(new_game_object)
@@ -108,25 +106,26 @@ def game_action(game_id):
     if player_id not in game.players:
         return jsonify({'error': 'id missing or not in game'}), 403
 
-    # Check that it's their turn
-    if game.turn != game.players.index(player_id):
-        return jsonify({'error': 'not your turn'}), 500
+    player = game.players.index(player_id)
+    num_players = len(game.players)
 
     # Parse json
     json = request.get_json()
-    if not json:
-        return jsonify({'error': 'no move object sent'}), 400
 
-    move_type = json.get('type')
+    # Make sure the json looks like we're expecting
+    try:
+        move = Move(json, player, num_players)
+    except InvalidMove as i:
+        return jsonify({'error': str(i)}), 500
+    except:
+        return jsonify({'error': 'Badly formed request'}), 400
 
-    if move_type == 'hint':
-        # hint logic goes here
-        pass
-    elif move_type == 'play':
-        # play logic goes here
-        pass
-    elif move_type == 'discard':
-        # discard logic goes here
-        pass
-    else:
-        return jsonify({'error': 'missing move type'}), 400
+    try:
+        game.make_move(move)
+        db.session.add(game)
+        db.session.flush()
+
+        return jsonify(game.to_json()), 200, \
+            {'Location': url_for('api.get_specific_game', game_id=game.id, _external=True)}
+    except InvalidMove as i:
+        return jsonify({'error': str(i)}), 500

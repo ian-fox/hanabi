@@ -40,9 +40,9 @@ class APITestCase(unittest.TestCase):
         self.assertFalse(game.started)
 
         # Check other game modes
-        self.assertFalse(game.hardMode)
-        self.assertTrue(game.rainbowIsColour)
-        self.assertFalse(game.perfectOrBust)
+        self.assertFalse(game.hard_mode)
+        self.assertFalse(game.chameleon_mode)
+        self.assertFalse(game.perfect_mode)
 
     def test_new_game_with_settings(self):
         """Should be able to specify settings in query"""
@@ -62,15 +62,15 @@ class APITestCase(unittest.TestCase):
         response = self.client.post(
             url_for('api.new_game'),
             headers={'Content-Type': 'application/json'},
-            data=json.dumps({'public': False, 'rainbowIsColour': False, 'perfectOrBust': True, 'hardMode': True}))
+            data=json.dumps({'public': False, 'chameleonMode': False, 'perfectMode': True, 'hardMode': True}))
         self.assertTrue(response.status_code == 201)
 
         url = response.headers.get('Location')
         game_id = url.split('/')[6]
         game = Game.query.get(game_id)
         self.assertFalse(game.public)
-        self.assertTrue(game.perfectOrBust)
-        self.assertFalse(game.rainbowIsColour)
+        self.assertTrue(game.perfect_mode)
+        self.assertFalse(game.chameleon_mode)
 
     def test_join_game(self):
         """Should be able to join games"""

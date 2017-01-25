@@ -22,7 +22,7 @@ class GameModelTestCase(unittest.TestCase):
         db.session.commit()
         json_game = g.to_json(0)
 
-        expected_keys = ['url', 'inPlay', 'started', 'discard', 'turn', 'misfires', 'perfectOrBust', 'rainbowIsColour',
+        expected_keys = ['url', 'inPlay', 'started', 'discard', 'turn', 'misfires', 'perfectMode', 'chameleonMode',
                          'hints', 'hands', 'deckSize', 'hardMode', 'lastTurn', 'lastPlayer']
         self.assertEqual(sorted(json_game.keys()), sorted(expected_keys))
         self.assertTrue('api/v1/games/' in json_game['url'])

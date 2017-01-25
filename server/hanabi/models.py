@@ -2,7 +2,7 @@ from hanabi import db
 from enum import IntEnum
 from random import shuffle, randint
 from flask import url_for
-from hanabi.Exceptions import CannotJoinGame, CannotStartGame
+from hanabi.Exceptions import CannotJoinGame, CannotStartGame, InvalidMove
 from uuid import uuid4
 
 
@@ -34,7 +34,7 @@ class Card:
     def __init__(self, int_representation):
         self.colour = Colour(int_representation // 10)
         self.rank = int_representation % 10
-        self.colourKnown = False
+        self.colourKnown = None
         self.rankKnown = False
 
     def to_num(self):
@@ -64,19 +64,19 @@ class Game(db.Model):
     id = db.Column(db.Integer, primary_key=True)
 
     # Settings
-    hardMode = db.Column(db.Boolean, default=False)
-    perfectOrBust = db.Column(db.Boolean, default=False)
+    hard_mode = db.Column(db.Boolean, default=False)
+    perfect_mode = db.Column(db.Boolean, default=False)
     public = db.Column(db.Boolean, index=True, default=False)
-    rainbowIsColour = db.Column(db.Boolean, default=False)
+    chameleon_mode = db.Column(db.Boolean, default=False)
 
     # Game Info
     discard = db.Column(db.PickleType, default=dict.fromkeys(list(Colour)))
     deck = db.Column(db.PickleType, default=[])
     hands = db.Column(db.PickleType, default=[])
     hints = db.Column(db.SmallInteger, default=8)
-    inPlay = db.Column(db.PickleType, default=dict.fromkeys(list(Colour)))
-    lastTurn = db.Column(db.Boolean, default=False)
-    lastPlayer = db.Column(db.SmallInteger, nullable=True, default=None)
+    inPlay = db.Column(db.PickleType, default=dict.fromkeys(list(Colour), 0))
+    last_turn = db.Column(db.Boolean, default=False)
+    last_player = db.Column(db.SmallInteger, nullable=True, default=None)
     misfires = db.Column(db.SmallInteger, default=3)
     players = db.Column(db.PickleType, default=[])
     started = db.Column(db.Boolean, index=True, default=False)
@@ -105,15 +105,15 @@ class Game(db.Model):
             'url': url_for('api.get_specific_game', game_id=self.id, _external=True),
             'discard': self.discard,
             'hands': rotate(self.hands, player_offset),
-            'hardMode': self.hardMode,
+            'hardMode': self.hard_mode,
             'deckSize': len(self.deck),
             'turn': self.turn,
             'started': self.started,
-            'rainbowIsColour': self.rainbowIsColour,
-            'perfectOrBust': self.perfectOrBust,
+            'chameleonMode': self.chameleon_mode,
+            'perfectMode': self.perfect_mode,
             'inPlay': self.inPlay,
-            'lastTurn': self.lastTurn,
-            'lastPlayer': self.lastPlayer,
+            'lastTurn': self.last_turn,
+            'lastPlayer': self.last_player,
             'misfires': self.misfires,
             'hints': self.hints
         }
@@ -128,7 +128,7 @@ class Game(db.Model):
             raise CannotStartGame('Game already in progress')
 
         self.started = True
-        self.deck = new_deck(self.hardMode)
+        self.deck = new_deck(self.hard_mode)
         self.turn = randint(0, len(self.players) - 1)
 
         num_cards = 5 if len(self.players) < 4 else 4
@@ -137,11 +137,80 @@ class Game(db.Model):
             for j in range(num_cards):
                 self.hands[-1].append(self.deck.pop())
 
-    def hint(self, player, type, attribute):
-        self.hints -= 1
-        for card in self.hands[self.player]:
-            if card.colour == attribute and type == HintType.COLOUR:
-                card.colourKnown = True
+    def make_move(self, move):
+        """Make a move or raise InvalidMove"""
 
-    def play_or_discard(self, player, index, type):
-        pass
+        # Can't make a move if it isn't your turn
+        if self.turn != move.moving_player:
+            raise InvalidMove('Not your turn')
+
+        if move.move_type == MoveType.HINT:
+            if self.hints == 0:
+                raise InvalidMove('No hints available')
+
+            if move.moving_player == move.hinted_player:
+                raise InvalidMove('Can\'t hint yourself')
+
+            self.hints -= 1
+
+            for card in self.hands[move.hinted_player]:
+                if card.colour == move.hint_colour:
+                    card.colourKnown = move.hint_colour
+                if card.rank == move.hint_rank:
+                    card.rankKnown = True
+
+                if self.chameleon_mode and card.colour == Colour.RAINBOW:
+                    if card.colourKnown is None:
+                        card.colourKnown = move.hint_colour
+                    else:
+                        # Making the assumption they can figure out that if a card is red and green, it's rainbow
+                        card.colourKnown = Colour.RAINBOW
+
+        elif move.move_type == MoveType.DISCARD:
+            if self.hints == 8:
+                raise InvalidMove('Can\'t discard with 8 hints')
+
+            discarded_card = self.hands[move.moving_player].pop(move.card_index)
+            self.hints += 1
+            self.discard[discarded_card.colour] += discarded_card.to_num()
+
+        else:
+            played_card = self.hands[move.moving_player].pop(move.card_index)
+            if self.inPlay[played_card.colour] + 1 == played_card.rank:
+                self.inPlay[played_card.colour] += 1
+            else:
+                self.misfires -= 1
+                self.discard[played_card.colour] += played_card.to_num()
+
+        # Draw a card if necessary and able
+        if move.move_type != MoveType.HINT and len(self.deck) > 0:
+            self.players[move.moving_player].append(Card(self.deck.pop()))
+
+        # Do we need to end the game?
+        if len(self.deck) == 0 and not self.perfect_mode:
+            self.last_turn = True
+            self.last_player = move.moving_player
+
+
+class Move:
+    def __init__(self, json, player, num_players):
+        self.move_type = MoveType(['hint', 'play', 'discard'].index(json['type']))
+        self.moving_player = player
+
+        if self.move_type == MoveType.HINT:
+            if json.get('rank') and json.get('colour'):
+                raise InvalidMove('Both rank and colour specified in hint')
+
+            if json.get('rank'):
+                self.hint_type = HintType.RANK
+                self.hint_rank = json['rank']
+                self.hint_colour = None
+            else:
+                self.hint_type = HintType.COLOUR
+                self.hint_colour = Colour(['blue', 'green', 'red', 'white', 'yellow', 'rainbow'].index(json['colour']))
+                self.hint_rank = None
+
+            self.hinted_player = (json['playerIndex'] + player) % num_players
+
+        else:
+            self.card_index = json['cardIndex']

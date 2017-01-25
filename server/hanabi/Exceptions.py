@@ -5,5 +5,6 @@ class InvalidMove(Exception):
 class CannotJoinGame(Exception):
     pass
 
+
 class CannotStartGame(Exception):
     pass
