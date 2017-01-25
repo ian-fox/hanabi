@@ -3,85 +3,165 @@
 
 Ian Fox
 
-Last updated September 20, 2016
+Last updated January 22, 2017
 
-## POST /newgame  
-**Query params:** public (boolean) - whether the game is publicly listed on the main page  
+## Card Representation
+Cards are represented as integers when in the deck, discard, or play. If c is a card in the deck then:
+* `c mod 10` corresponds to the rank of the card
+* `floor(c/10)` corresponds to the colour of the card, as follows:  
+    + 0: blue  
+    + 1: green  
+    + 2: red  
+    + 3: white  
+    + 4: yellow  
+    + 5: rainbow  
+If c is a card in discard or play, the integer corresponds to its rank.
+
+In a player's hand, it is an object with the following fields:
+* `colour` (integer) - same as above
+* `rank` (integer)
+* `knownColour` (integer) - null or a colour, as above
+* `knownRank` (boolean) - whether or not they know the rank
+
+## Player Ordering
+You are always the player at index 0. Turns go in ascending order.
+
+## POST /games/new  
+Body params (0 or more):
+* `public` (boolean) - whether the game is publicly listed on the main page. Default: `false`
+* `chameleonMode` (boolean) - whether rainbow cards are special. Default: `false`
+* `hardMode` (boolean) - whether there is only one of each rainbow card. Default: `false`
+* `perfectMode` (boolean) - whether the game should be scored in binary (you reached 30 or you didn't). Default: `false`  
+
+For more information on the latter three options see "Game Options" in the functional spec.
 
 ### Responses:
-* `200 OK`
+* `201 OK`
 * `500 Server Error`
 
+If response was OK, also sends the newly created Game object as a payload, and the following headers:
+* `Location`: url to the created game api endpoint  
+* `id`: UUID for the admin of the game (the caller of this endpoint)
+
 ## GET /games  
-Returns an array of objects:  
+Returns an array of pared down game objects:  
 ```
 {
   id: '12345',  
-  players: 2
+  players: 2,
+  perfectMode: false,
+  rainbowIsColour: false,
+  hardMode: false,
+  url: 'url to game object api endpoint'
 }
 ```
-Games that have been started will not be shown.
+Games that have been started or are not public will not be shown.
 
 ## GET /games/:gameid
+Headers:
+* `id`: UUID of the user making the request
+
+Route params:
+* `:gameid`: the ID of the game
+
+### Responses
+* `200 OK`
+* `403 Forbidden` if the id header is missing or not in the game
+
 Returns a game object:  
 ```
 {  
-  inPlay: dict,  
+  url: string,  
   discard: dict,  
-  cardsInDeck: integer,  
-  turn: integer,  
+  finalScore: integer or null,  
   hands: array,  
+  hardMode: boolean,  
+  deckSize: integer,  
+  turn: integer,  
+  started: boolean,  
+  rainbowIsColour: boolean,  
+  perfectMode: boolean,  
+  inPlay: dict,  
+  lastTurn: boolean,  
+  lastPlayer: integer or null,  
   misfires: integer,  
-  hints: integer,
-  rainbowIsColour: boolean,
-  perfectOrBust: boolean,
-  started: boolean  
+  hints: integer
 }
 ```
 
 ### Fields:  
-* `inPlay:` dictionary of colour -> array of card objects
-* `discard:` dictionary of colour -> array of card objects
-* `cardsInDeck:` number of cards remaining in the deck
-* `turn:` integer, index of player whose turn it is
-* `hands:` array of hand objects  
-* `misfires:` integer, 1-3, number of missfires remaining
-* `hints:` integer, 0-8, number of hints remaining
-* `rainbowIsColour:` boolean, if rainbow counts as its own colour
-* `perfectOrBust:` boolean, whether the game is scored partially or not 
-* `started:` whether the game is waiting for players or has started
+* `url:` the url to the api endpoint for the game  
+* `discard:` dictionary of integer -> integer (see: card representation)
+* `finalScore:` the final score once the game has finished, `null` while game in progress
+* `hands:` array of arrays of cards (see: player ordering)  
+* `hardMode:` whether the game is in hard mode (see: game options)
+* `deckSize:` number of cards remaining in the deck  
+* `turn:` index of player whose turn it is  
+* `started:` whether the game has started  
+* `rainbowIsColour:` whether rainbow counts as its own colour (see: game options)  
+* `perfectMode:` whether the game is in binary scoring mode (see: game options)  
+* `inPlay:` dictionary of integer -> integer (see: card representation)  
+* `lastTurn:` whether or not it is the last turn (see: game options)
+* `lastPlayer:` index of the last player to get a turn if lastTurn is true, null otherwise  
+* `misfires:` number of misfires (3 = good, 0 = you're dead)
+* `hints:` number of remaining hints (8 = all hints, 0 = no hints)
 
-## PUT /games/gameid
-Body params (one or more):
-* `leave:` string id of the client leaving the game
-* `join:` string id of the client joining the game
-
-The following parameters are only open to the group admin:
-* `start:` start the game. Game starts if this key is defined
-* `rainbowIsColour:` switches the mode of the room
-* `perfectOrBust:` switches the mode of the room
-
-All admin requests require a unique `token,` as does leaving a game
-
+## PUT /games/:gameid/join
+Route params:
+* `:gameid`: the ID of the game
 
 ### Responses
 * `200 OK`
-* `500 Something bad happened`
+* `500 Game is full or has started`
 
-If it was a join request, also returns a unique `token`.
+If response was OK, returns the following headers:  
+* `Location`: url to the joined game api endpoint
+* `id`: UUID for the admin of the game (the caller of this endpoint)  
 
+## PUT /games/:gameid/start
+Headers:
+* `id`: UUID of the user making the request (must match that of the admin of the game)
 
-## POST /games/:gameId/action
-### Body parameters:  
- * `action_type`: One of hint, discard, play
+Route params:
+* `:gameid`: the ID of the game
 
-#### If hint:
- * `player`: index of the player receiving the hint
- * `attribute`: one of colour or number
-
-#### If discard/play
- * `index`: the index within the specified section of the card to discard/play
+Starts the game (deals hands, chooses random player to start).
 
 ### Responses
 * `200 OK`
-* `403 Invalid`: the hint is invalid, it is not the player's turn, etc
+* `403 Only admin can start the game`
+* `500 Cannot start with one player or game in progress`
+
+## PUT /games/:gameid/action
+Headers:
+* `id`: UUID of the user making the request (must match player whose turn it is)
+
+Route params:
+* `:gameid`: the ID of the game
+
+Body Params (all requests):
+* `type` (string) - one of `hint`, `play`, or `discard`  
+
+Body Params (hints):
+* `playerIndex` (integer) - index of the player you want to hint
+* `colour` (integer) - the colour you want to hint about
+* `rank` (integer) - the rank you want to hint about
+`colour` and `rank` are mutually exclusive
+
+Body Params (discard or play):
+* `cardIndex` (integer) - index of the card you want to discard or play
+
+### Responses
+* `200 OK`
+* `400 Badly Formed Request` (request doesn't conform to spec)
+* `403 Unauthorized` (player id is not included or not in the game)
+* `500 Invalid move`
+
+A move may be invalid if:
+* It is not your turn  
+* A hint does not match any cards in the players hand  
+* You try to hint yourself
+* Both colour and rank are specified for hints  
+* You try to hint about rainbow when rainbow is not treated as a colour  
+* You try to hint when there are no hint tokens  
+* You try to discard when there are 8 hint tokens  

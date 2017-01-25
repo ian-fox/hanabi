@@ -32,5 +32,12 @@ Users will be able to:
 * See other players' hands
 * See whose turn it is
 
+### Game Options
+The following options are available on each game:
+* Public: True if the game is listed under all games, for random strangers to join  
+* "Perfect Mode": True if the game should be scored as binary (did you get a perfect score or not)  
+* "Chameleon Mode": False if the rainbow is a colour you can name for hints. Otherwise, a hint about a colour will also point out any rainbow cards.  
+* "Hard Mode": True if there's only one copy of each rainbow card, rather than the standard three 1's, one 5, and two of everything else.
+
 ## Open Issues
 Any issues still up for debate will be documented here.
