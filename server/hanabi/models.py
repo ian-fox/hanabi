@@ -2,7 +2,7 @@ from hanabi import db
 from enum import IntEnum
 from random import shuffle, randint
 from flask import url_for
-from hanabi.Exceptions import CannotJoinGame
+from hanabi.Exceptions import CannotJoinGame, CannotStartGame
 from uuid import uuid4
 
 
@@ -120,6 +120,13 @@ class Game(db.Model):
         return json_game
 
     def start(self):
+        # No point starting a game with one player, or that's already started
+        if len(self.players) < 2:
+            raise CannotStartGame('Cannot start game with one player')
+
+        if self.started:
+            raise CannotStartGame('Game already in progress')
+
         self.started = True
         self.deck = new_deck(self.hardMode)
         self.turn = randint(0, len(self.players) - 1)

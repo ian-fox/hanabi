@@ -2,7 +2,7 @@ from . import api
 from flask import jsonify, url_for, request
 from hanabi import db
 from hanabi.models import Game
-from hanabi.Exceptions import CannotJoinGame
+from hanabi.Exceptions import CannotJoinGame, CannotStartGame
 from uuid import uuid4
 
 
@@ -82,25 +82,21 @@ def join_game(game_id):
 def start_game(game_id):
     game = Game.query.get_or_404(game_id)
 
-    # No point starting a game with one player, or that's already started
-    if len(game.players) < 2:
-        return jsonify({'error': 'cannot start game with one player'}), 500
-
-    if game.started:
-        return jsonify({'error': 'game already in progress'}), 500
-
     # Must be admin to start the game
     request_id = request.headers.get('id')
     if request_id != game.players[0]:
         return jsonify({'error': 'must be admin to start the game'}), 403
 
-    # Start the game
-    game.start()
-    db.session.add(game)
-    db.session.flush()
+    try:
+        # Start the game
+        game.start()
+        db.session.add(game)
+        db.session.flush()
 
-    return jsonify(game.to_json()), 200, \
-        {'Location': url_for('api.get_specific_game', game_id=game.id, _external=True)}
+        return jsonify(game.to_json()), 200, \
+            {'Location': url_for('api.get_specific_game', game_id=game.id, _external=True)}
+    except CannotStartGame as c:
+        return jsonify({'error': str(c)}), 500
 
 
 @api.route('/games/<int:game_id>/action', methods=['PUT'])
