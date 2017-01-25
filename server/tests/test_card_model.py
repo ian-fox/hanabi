@@ -1,4 +1,5 @@
 import unittest
+
 from hanabi.models import Card, Colour
 
 

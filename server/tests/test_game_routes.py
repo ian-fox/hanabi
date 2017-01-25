@@ -1,8 +1,10 @@
+import json
 import unittest
+
 from flask import url_for
+
 from hanabi import create_app, db
 from hanabi.models import Game
-import json
 
 
 class APITestCase(unittest.TestCase):

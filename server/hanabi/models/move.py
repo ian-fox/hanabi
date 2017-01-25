@@ -1,6 +1,8 @@
 from enum import IntEnum
+
 from hanabi.exceptions import InvalidMove
 from hanabi.models import Colour
+
 
 class MoveType(IntEnum):
     HINT = 0

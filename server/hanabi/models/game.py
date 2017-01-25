@@ -1,9 +1,11 @@
-from hanabi import db
 from random import randint
+from uuid import uuid4
+
 from flask import url_for
+
+from hanabi import db
 from hanabi.exceptions import CannotJoinGame, CannotStartGame, InvalidMove
 from hanabi.models import Colour, new_deck, MoveType, Card
-from uuid import uuid4
 
 
 def rotate(array, offset):

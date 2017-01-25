@@ -1,4 +1,5 @@
 import unittest
+
 from hanabi import create_app, db
 from hanabi.models import Game
 

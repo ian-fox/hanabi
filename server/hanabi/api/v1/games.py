@@ -1,9 +1,12 @@
 from . import api
-from flask import jsonify, url_for, request
-from hanabi import db
-from hanabi.models import Game, Move
-from hanabi.exceptions import CannotJoinGame, CannotStartGame, InvalidMove
+
 from uuid import uuid4
+
+from flask import jsonify, url_for, request
+
+from hanabi import db
+from hanabi.exceptions import CannotJoinGame, CannotStartGame, InvalidMove
+from hanabi.models import Game, Move
 
 
 def game_summary(game):
