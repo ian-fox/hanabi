@@ -1,0 +1,11 @@
+language: python
+python:
+  - "3.5"
+services:
+  - mysql
+before_install:
+  - mysql -e 'CREATE DATABASE hanabi'
+install: "pip install -r requirements.txt"
+script:
+  - export TEST_DATABASE_URL=mysql://root:@localhost/hanabi
+  - python server/manage.py test
