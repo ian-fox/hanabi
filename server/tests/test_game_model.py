@@ -2,7 +2,7 @@ import unittest
 
 from hanabi import create_app, db
 from hanabi.exceptions import CannotJoinGame, CannotStartGame
-from hanabi.models import Game
+from hanabi.models import Card, Game
 
 
 class GameModelTestCase(unittest.TestCase):
@@ -35,12 +35,12 @@ class GameModelTestCase(unittest.TestCase):
 
     def test_to_json_different_index(self):
         """The hands should be arranged such that the specified player is index 0"""
-        g = Game(players=['id1', 'id2', 'id3', 'id4'], hands=['hand1', 'hand2', 'hand3', 'hand4'])
+        g = Game(players=['id1', 'id2', 'id3', 'id4'], hands=[[Card(1)], [Card(2)], [Card(3)], [Card(4)]])
         db.session.add(g)
         db.session.commit()
         json_game = g.to_json(2)
 
-        self.assertListEqual(json_game['hands'], ['hand3', 'hand4', 'hand1', 'hand2'])
+        self.assertListEqual(json_game['hands'], list(map(lambda x: [Card(x).to_json()], [3, 4, 1, 2])))
 
     def test_start(self):
         """Starting a game should work"""

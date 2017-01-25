@@ -57,7 +57,7 @@ class Game(db.Model):
         json_game = {
             'url': url_for('api.get_specific_game', game_id=self.id, _external=True),
             'discard': self.discard,
-            'hands': rotate(list(map(lambda arr: list(map(lambda hand: hand.to_json(), arr)), self.hands)),
+            'hands': rotate(list(map(lambda arr: list(map(lambda card: card.to_json(), arr)), self.hands)),
                             player_offset),
             'hardMode': self.hard_mode,
             'deckSize': len(self.deck),
@@ -89,7 +89,7 @@ class Game(db.Model):
         for i in range(len(self.players)):
             self.hands.append([])
             for j in range(num_cards):
-                self.hands[-1].append(self.deck.pop())
+                self.hands[-1].append(Card(self.deck.pop()))
 
     def make_move(self, move):
         """Make a move or raise InvalidMove"""

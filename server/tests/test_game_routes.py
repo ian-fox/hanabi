@@ -184,7 +184,7 @@ class APITestCase(unittest.TestCase):
 
     def test_get_rotated_game(self):
         """If you GET a game, you are player[0]"""
-        game = Game(players=['id1', 'id2', 'id3', 'id4'], hands=['hand1', 'hand2', 'hand3', 'hand4'], turn=2)
+        game = Game(players=['id1', 'id2', 'id3', 'id4'], hands=[[Card(1)], [Card(2)], [Card(3)], [Card(4)]], turn=2)
         db.session.add(game)
         db.session.commit()
 
@@ -193,7 +193,8 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
 
         json_response = json.loads(response.data.decode('utf-8'))
-        self.assertListEqual(json_response['hands'], ['hand3', 'hand4', 'hand1', 'hand2'])
+        self.assertListEqual(json_response['hands'], list(map(lambda card: [card.to_json()],
+                                                              [Card(3), Card(4), Card(1), Card(2)])))
         self.assertEqual(json_response['turn'], 0)
 
     def test_make_valid_moves(self):
@@ -270,3 +271,26 @@ class APITestCase(unittest.TestCase):
         self.assertListEqual(game.discard[Colour.BLUE], [1])
         self.assertEqual(len(game.deck), 2)
         self.assertListEqual(list(map(lambda card: card.to_num(), game.hands[0])), [2, 3])  # Picked up a blue 3
+
+    def test_hint_with_no_hints(self):
+        """Try to hint when there are none"""
+        game = Game(players=['id1', 'id2'], started=True, turn=0, hints=0,
+                    deck=[5, 4, 3, 2, 1],  # Blue 1 through 5
+                    hands=[[Card(1), Card(2)],         # Blue 1, 2
+                           [Card(51), Card(42)]])            # Rainbow 1, Yellow 2
+        db.session.add(game)
+        db.session.commit()
+
+        # Player 1 hints player 2 about rainbow
+        response = self.client.put(
+            url_for('api.make_move', game_id=1),
+            headers={'Content-Type': 'application/json', 'id': 'id1'},
+            data=json.dumps({'type': 'hint', 'colour': 'rainbow', 'playerIndex': 1}))
+
+        self.assertEqual(response.status_code, 500)
+        self.assertFalse(game.hands[1][0].known_rank)
+        self.assertFalse(game.hands[1][1].known_rank)
+        self.assertIsNone(game.hands[1][0].known_colour)
+        self.assertIsNone(game.hands[1][1].known_colour)
+        self.assertEqual(game.hints, 0)
+        self.assertEqual(game.turn, 0)
