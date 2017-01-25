@@ -6,7 +6,7 @@ Ian Fox
 Last updated January 22, 2017
 
 ## Card Representation
-Cards are represented as integers when in the deck, discard, or play. If c is a card then:
+Cards are represented as integers when in the deck, discard, or play. If c is a card in the deck then:
 * `c mod 10` corresponds to the rank of the card
 * `floor(c/10)` corresponds to the colour of the card, as follows:  
     + 0: blue  
@@ -15,6 +15,7 @@ Cards are represented as integers when in the deck, discard, or play. If c is a 
     + 3: white  
     + 4: yellow  
     + 5: rainbow  
+If c is a card in discard or play, the integer corresponds to its rank.
 
 In a player's hand, it is an object with the following fields:
 * `colour` (integer) - same as above

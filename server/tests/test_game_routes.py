@@ -4,7 +4,7 @@ import unittest
 from flask import url_for
 
 from hanabi import create_app, db
-from hanabi.models import Game
+from hanabi.models import Game, Card, Colour
 
 
 class APITestCase(unittest.TestCase):
@@ -184,7 +184,7 @@ class APITestCase(unittest.TestCase):
 
     def test_get_rotated_game(self):
         """If you GET a game, you are player[0]"""
-        game = Game(players=['id1', 'id2', 'id3', 'id4'], hands=['hand1', 'hand2', 'hand3', 'hand4'])
+        game = Game(players=['id1', 'id2', 'id3', 'id4'], hands=['hand1', 'hand2', 'hand3', 'hand4'], turn=2)
         db.session.add(game)
         db.session.commit()
 
@@ -194,3 +194,79 @@ class APITestCase(unittest.TestCase):
 
         json_response = json.loads(response.data.decode('utf-8'))
         self.assertListEqual(json_response['hands'], ['hand3', 'hand4', 'hand1', 'hand2'])
+        self.assertEqual(json_response['turn'], 0)
+
+    def test_make_valid_moves(self):
+        """Make some valid moves, see that they're valid"""
+        game = Game(players=['id1', 'id2'], started=True, turn=0,
+                    deck=[5, 4, 3, 2, 1],  # Blue 1 through 5
+                    hands=[[Card(1), Card(2)],         # Blue 1, 2
+                           [Card(51), Card(42)]])            # Rainbow 1, Yellow 2
+        db.session.add(game)
+        db.session.commit()
+
+        # Player 1 hints player 2 about rainbow
+        response = self.client.put(
+            url_for('api.make_move', game_id=1),
+            headers={'Content-Type': 'application/json', 'id': 'id1'},
+            data=json.dumps({'type': 'hint', 'colour': 'rainbow', 'playerIndex': 1}))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(game.hands[1][0].known_rank)
+        self.assertFalse(game.hands[1][1].known_rank)
+        self.assertEqual(game.hands[1][0].known_colour, Colour.RAINBOW)
+        self.assertIsNone(game.hands[1][1].known_colour)
+        self.assertEqual(game.hints, 7)
+        self.assertEqual(game.turn, 1)
+
+        # Player 2 hints player 1 about ones
+        response = self.client.put(
+            url_for('api.make_move', game_id=1),
+            headers={'Content-Type': 'application/json', 'id': 'id2'},
+            data=json.dumps({'type': 'hint', 'rank': 1, 'playerIndex': 1}))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(game.hands[0][0].known_rank)
+        self.assertFalse(game.hands[0][1].known_rank)
+        self.assertIsNone(game.hands[0][0].known_colour)
+        self.assertIsNone(game.hands[0][1].known_colour)
+        self.assertEqual(game.hints, 6)
+        self.assertEqual(game.turn, 0)
+
+        # Player 1 plays the one
+        response = self.client.put(
+            url_for('api.make_move', game_id=1),
+            headers={'Content-Type': 'application/json', 'id': 'id1'},
+            data=json.dumps({'type': 'play', 'cardIndex': 0}))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(game.misfires, 3)
+        self.assertEqual(game.inPlay[Colour.BLUE], 1)
+        self.assertEqual(len(game.deck), 4)
+        self.assertListEqual(list(map(lambda card: card.to_num(), game.hands[0])), [2, 1])  # Picked up another blue 1
+        self.assertEqual(game.turn, 1)
+
+        # Player 2 tries to play the two
+        response = self.client.put(
+            url_for('api.make_move', game_id=1),
+            headers={'Content-Type': 'application/json', 'id': 'id2'},
+            data=json.dumps({'type': 'play', 'cardIndex': 1}))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(game.misfires, 2)
+        self.assertEqual(game.inPlay[Colour.YELLOW], 0)
+        self.assertListEqual(game.discard[Colour.YELLOW], [2])
+        self.assertEqual(len(game.deck), 3)
+        self.assertListEqual(list(map(lambda card: card.to_num(), game.hands[1])), [51, 2])  # Picked up a blue 2
+
+        # Player 1 discards the 1 they picked up
+        response = self.client.put(
+            url_for('api.make_move', game_id=1),
+            headers={'Content-Type': 'application/json', 'id': 'id1'},
+            data=json.dumps({'type': 'discard', 'cardIndex': 1}))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(game.hints, 7)
+        self.assertListEqual(game.discard[Colour.BLUE], [1])
+        self.assertEqual(len(game.deck), 2)
+        self.assertListEqual(list(map(lambda card: card.to_num(), game.hands[0])), [2, 3])  # Picked up a blue 3

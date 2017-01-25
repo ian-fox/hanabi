@@ -13,11 +13,19 @@ class Card:
     def __init__(self, int_representation):
         self.colour = Colour(int_representation // 10)
         self.rank = int_representation % 10
-        self.colourKnown = None
-        self.rankKnown = False
+        self.known_colour = None
+        self.known_rank = False
 
     def to_num(self):
         return 10 * self.colour.value + self.rank
+
+    def to_json(self):
+        return {
+            'colour': self.colour,
+            'rank': self.rank,
+            'knownColour': self.known_colour,
+            'knownRank': self.known_rank
+        }
 
 
 def new_deck(hard_mode=False):

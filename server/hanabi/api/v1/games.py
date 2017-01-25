@@ -101,7 +101,7 @@ def start_game(game_id):
 
 
 @api.route('/games/<int:game_id>/action', methods=['PUT'])
-def game_action(game_id):
+def make_move(game_id):
     game = Game.query.get_or_404(game_id)
 
     # Check that the player is in the game

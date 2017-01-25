@@ -23,7 +23,7 @@ class Game(db.Model):
     chameleon_mode = db.Column(db.Boolean, default=False)
 
     # Game Info
-    discard = db.Column(db.PickleType, default=dict.fromkeys(list(Colour)))
+    discard = db.Column(db.PickleType, default={key: [] for key in Colour})
     deck = db.Column(db.PickleType, default=[])
     hands = db.Column(db.PickleType, default=[])
     hints = db.Column(db.SmallInteger, default=8)
@@ -57,16 +57,17 @@ class Game(db.Model):
         json_game = {
             'url': url_for('api.get_specific_game', game_id=self.id, _external=True),
             'discard': self.discard,
-            'hands': rotate(self.hands, player_offset),
+            'hands': rotate(list(map(lambda arr: list(map(lambda hand: hand.to_json(), arr)), self.hands)),
+                            player_offset),
             'hardMode': self.hard_mode,
             'deckSize': len(self.deck),
-            'turn': self.turn,
+            'turn': (self.turn + player_offset) % len(self.players),
             'started': self.started,
             'chameleonMode': self.chameleon_mode,
             'perfectMode': self.perfect_mode,
             'inPlay': self.inPlay,
             'lastTurn': self.last_turn,
-            'lastPlayer': self.last_player,
+            'lastPlayer': self.last_player and (self.last_player + player_offset) % len(self.players),
             'misfires': self.misfires,
             'hints': self.hints
         }
@@ -93,7 +94,9 @@ class Game(db.Model):
     def make_move(self, move):
         """Make a move or raise InvalidMove"""
 
-        # Can't make a move if it isn't your turn
+        if not self.started:
+            raise InvalidMove('Game not started')
+
         if self.turn != move.moving_player:
             raise InvalidMove('Not your turn')
 
@@ -104,24 +107,25 @@ class Game(db.Model):
             if move.moving_player == move.hinted_player:
                 raise InvalidMove('Can\'t hint yourself')
 
-            self.hints -= 1
+            if self.chameleon_mode and move.hint_colour == Colour.RAINBOW:
+                raise InvalidMove('Can\'t hint about rainbow in a chameleon mode game')
 
             hintedACard = False
             for card in self.hands[move.hinted_player]:
                 if card.colour == move.hint_colour:
-                    card.colourKnown = move.hint_colour
+                    card.known_colour = move.hint_colour
                     hintedACard = True
                 if card.rank == move.hint_rank:
-                    card.rankKnown = True
+                    card.known_rank = True
                     hintedACard = True
 
                 if self.chameleon_mode and card.colour == Colour.RAINBOW:
                     hintedACard = True
-                    if card.colourKnown is None:
-                        card.colourKnown = move.hint_colour
+                    if card.known_colour is None:
+                        card.known_colour = move.hint_colour
                     else:
                         # Making the assumption they can figure out that if a card is red and green, it's rainbow
-                        card.colourKnown = Colour.RAINBOW
+                        card.known_colour = Colour.RAINBOW
 
             if not hintedACard:
                 raise InvalidMove('Can\'t hint about a card that doesn\'t exist')
@@ -134,7 +138,7 @@ class Game(db.Model):
 
             discarded_card = self.hands[move.moving_player].pop(move.card_index)
             self.hints += 1
-            self.discard[discarded_card.colour] += discarded_card.to_num()
+            self.discard[discarded_card.colour].append(discarded_card.rank)
 
         else:
             played_card = self.hands[move.moving_player].pop(move.card_index)
@@ -142,11 +146,14 @@ class Game(db.Model):
                 self.inPlay[played_card.colour] += 1
             else:
                 self.misfires -= 1
-                self.discard[played_card.colour] += played_card.to_num()
+                self.discard[played_card.colour].append(played_card.rank)
 
         # Draw a card if necessary and able
         if move.move_type != MoveType.HINT and len(self.deck) > 0:
-            self.players[move.moving_player].append(Card(self.deck.pop()))
+            self.hands[move.moving_player].append(Card(self.deck.pop()))
+
+        # Advance the turn
+        self.turn = (self.turn + 1) % len(self.players)
 
         # Do we need to end the game?
         if len(self.deck) == 0 and not self.perfect_mode:

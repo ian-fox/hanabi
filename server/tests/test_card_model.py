@@ -10,14 +10,14 @@ class CardModelTestCase(unittest.TestCase):
 
         self.assertEqual(c.colour, Colour.BLUE)
         self.assertEqual(c.rank, 1)
-        self.assertIsNone(c.colourKnown)
-        self.assertFalse(c.rankKnown)
+        self.assertIsNone(c.known_colour)
+        self.assertFalse(c.known_rank)
 
         c = Card(42)
         self.assertEqual(c.colour, Colour.YELLOW)
         self.assertEqual(c.rank, 2)
-        self.assertIsNone(c.colourKnown)
-        self.assertFalse(c.rankKnown)
+        self.assertIsNone(c.known_colour)
+        self.assertFalse(c.known_rank)
 
 
 class NewDeckTestCase(unittest.TestCase):
