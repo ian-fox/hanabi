@@ -106,18 +106,27 @@ class Game(db.Model):
 
             self.hints -= 1
 
+            hintedACard = False
             for card in self.hands[move.hinted_player]:
                 if card.colour == move.hint_colour:
                     card.colourKnown = move.hint_colour
+                    hintedACard = True
                 if card.rank == move.hint_rank:
                     card.rankKnown = True
+                    hintedACard = True
 
                 if self.chameleon_mode and card.colour == Colour.RAINBOW:
+                    hintedACard = True
                     if card.colourKnown is None:
                         card.colourKnown = move.hint_colour
                     else:
                         # Making the assumption they can figure out that if a card is red and green, it's rainbow
                         card.colourKnown = Colour.RAINBOW
+
+            if not hintedACard:
+                raise InvalidMove('Can\'t hint about a card that doesn\'t exist')
+
+            self.hints -= 1
 
         elif move.move_type == MoveType.DISCARD:
             if self.hints == 8:
