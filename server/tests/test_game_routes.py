@@ -474,3 +474,237 @@ class APITestCase(unittest.TestCase):
         self.assertEqual(game.hands[1][0].known_colour, Colour.RAINBOW)
         self.assertIsNone(game.hands[1][1].known_colour)
         self.assertEqual(game.turn, 1)
+
+
+    def test_win_game(self):
+        """Game should end when you play the last card"""
+        game = Game(players=['id1', 'id2'], started=True, score=29,
+                    in_play={Colour.BLUE: 5, Colour.RED: 5, Colour.YELLOW: 5, Colour.WHITE: 5, Colour.GREEN: 5,
+                             Colour.RAINBOW: 4},
+                    hands=[[Card(55)], []])
+        db.session.add(game)
+        db.session.commit()
+
+        # Player 1 plays the last card
+        response = self.client.put(
+            url_for('api.make_move', game_id=1),
+            headers={'Content-Type': 'application/json', 'id': 'id1'},
+            data=json.dumps({'type': 'play', 'cardIndex': 0}))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(game.final_score, 30)
+
+    def test_win_game_on_last_turn(self):
+        """If you win on the last turn of perfect mode it's still good"""
+        game = Game(players=['id1', 'id2'], started=True, hard_mode=True, hints=0, score=29,
+                    in_play={Colour.BLUE: 5, Colour.RED: 5, Colour.YELLOW: 5, Colour.WHITE: 5, Colour.GREEN: 5,
+                             Colour.RAINBOW: 4},
+                    hands=[[Card(55), Card(1)], [Card(1)]],
+                    deck=[1])
+        db.session.add(game)
+        db.session.commit()
+
+        self.assertFalse(game.last_turn)
+        self.assertIsNone(game.final_score)
+
+        # Player 1 discards
+        response = self.client.put(
+            url_for('api.make_move', game_id=1),
+            headers={'Content-Type': 'application/json', 'id': 'id1'},
+            data=json.dumps({'type': 'discard', 'cardIndex': 1}))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(game.last_turn)
+        self.assertEqual(game.last_player, 0)
+        self.assertIsNone(game.final_score)
+
+        # Player 2 discards
+        response = self.client.put(
+            url_for('api.make_move', game_id=1),
+            headers={'Content-Type': 'application/json', 'id': 'id2'},
+            data=json.dumps({'type': 'discard', 'cardIndex': 0}))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNone(game.final_score)
+
+        # Player 1 plays the 5
+        response = self.client.put(
+            url_for('api.make_move', game_id=1),
+            headers={'Content-Type': 'application/json', 'id': 'id1'},
+            data=json.dumps({'type': 'play', 'cardIndex': 0}))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(game.final_score, 30)
+
+    def test_lose_game(self):
+        """If you run out of misfires, you lose"""
+        game = Game(players=['id1', 'id2'], misfires=1, hands=[[Card(5)], []], deck=[1, 2, 3], score=3, started=True)
+        db.session.add(game)
+        db.session.commit()
+
+        # Player 1 plays the 5
+        response = self.client.put(
+            url_for('api.make_move', game_id=1),
+            headers={'Content-Type': 'application/json', 'id': 'id1'},
+            data=json.dumps({'type': 'play', 'cardIndex': 0}))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(game.final_score, 0)
+
+    def test_end_game(self):
+        """Game ends when you run out of cards"""
+        game = Game(players=['id1', 'id2'], started=True, hard_mode=True, hints=0, score=23,
+                    in_play={Colour.BLUE: 5, Colour.RED: 3, Colour.YELLOW: 2, Colour.WHITE: 4, Colour.GREEN: 5,
+                             Colour.RAINBOW: 4},
+                    hands=[[Card(2), Card(1)], [Card(1)]],
+                    deck=[1])
+        db.session.add(game)
+        db.session.commit()
+
+        self.assertFalse(game.last_turn)
+
+        # Player 1 discards
+        response = self.client.put(
+            url_for('api.make_move', game_id=1),
+            headers={'Content-Type': 'application/json', 'id': 'id1'},
+            data=json.dumps({'type': 'discard', 'cardIndex': 1}))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(game.last_turn)
+        self.assertEqual(game.last_player, 0)
+        self.assertIsNone(game.final_score)
+
+        # Player 2 discards
+        response = self.client.put(
+            url_for('api.make_move', game_id=1),
+            headers={'Content-Type': 'application/json', 'id': 'id2'},
+            data=json.dumps({'type': 'discard', 'cardIndex': 0}))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNone(game.final_score)
+
+        # Player 1 discards
+        response = self.client.put(
+            url_for('api.make_move', game_id=1),
+            headers={'Content-Type': 'application/json', 'id': 'id1'},
+            data=json.dumps({'type': 'discard', 'cardIndex': 0}))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(game.final_score, 23)
+
+
+    def test_win_perfect_game(self):
+        """Perfect mode doesn't end when the deck runs out"""
+        game = Game(players=['id1', 'id2'], started=True, perfect_mode=True, hints=0, score=29,
+                    in_play={Colour.BLUE: 4, Colour.RED: 5, Colour.YELLOW: 5, Colour.WHITE: 5, Colour.GREEN: 5,
+                             Colour.RAINBOW: 5},
+                    hands=[[Card(5), Card(1), Card(11)], [Card(1), Card(21)]],
+                    deck=[1])
+        db.session.add(game)
+        db.session.commit()
+
+        self.assertFalse(game.last_turn)
+
+        for i in range(2):
+            # Player 1 discards
+            response = self.client.put(
+                url_for('api.make_move', game_id=1),
+                headers={'Content-Type': 'application/json', 'id': 'id1'},
+                data=json.dumps({'type': 'discard', 'cardIndex': 1}))
+
+            self.assertEqual(response.status_code, 200)
+            self.assertFalse(game.last_turn)
+            self.assertIsNone(game.last_player)
+            self.assertIsNone(game.final_score)
+
+            # Player 2 discards
+            response = self.client.put(
+                url_for('api.make_move', game_id=1),
+                headers={'Content-Type': 'application/json', 'id': 'id2'},
+                data=json.dumps({'type': 'discard', 'cardIndex': 0}))
+
+            self.assertEqual(response.status_code, 200)
+            self.assertFalse(game.last_turn)
+            self.assertIsNone(game.last_player)
+            self.assertIsNone(game.final_score)
+
+        # Player 1 plays
+        response = self.client.put(
+            url_for('api.make_move', game_id=1),
+            headers={'Content-Type': 'application/json', 'id': 'id1'},
+            data=json.dumps({'type': 'play', 'cardIndex': 0}))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(game.final_score, 30)
+
+    def test_discard_last_one(self):
+        """Perfect mode ends as soon as it's impossible"""
+        game = Game(players=['id1', 'id2'], started=True, perfect_mode=True, discard={Colour.BLUE: [1, 1]},
+                    hands=[[Card(1)], []], deck=[3, 4, 5], score=5, hints=0)
+        db.session.add(game)
+        db.session.commit()
+
+        self.assertIsNone(game.final_score)
+
+        # Player 1 discards
+        response = self.client.put(
+            url_for('api.make_move', game_id=1),
+            headers={'Content-Type': 'application/json', 'id': 'id1'},
+            data=json.dumps({'type': 'discard', 'cardIndex': 0}))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(game.final_score, 0)
+
+    def test_discard_last_three(self):
+        """Perfect mode ends as soon as it's impossible"""
+        game = Game(players=['id1', 'id2'], started=True, perfect_mode=True, discard={Colour.BLUE: [3]},
+                    hands=[[Card(3)], []], deck=[1, 4, 5], score=5, hints=0)
+        db.session.add(game)
+        db.session.commit()
+
+        self.assertIsNone(game.final_score)
+
+        # Player 1 discards
+        response = self.client.put(
+            url_for('api.make_move', game_id=1),
+            headers={'Content-Type': 'application/json', 'id': 'id1'},
+            data=json.dumps({'type': 'discard', 'cardIndex': 0}))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(game.final_score, 0)
+
+    def test_discard_last_five(self):
+        """Perfect mode ends as soon as it's impossible"""
+        game = Game(players=['id1', 'id2'], started=True, perfect_mode=True, discard={Colour.BLUE: []},
+                    hands=[[Card(5)], []], deck=[3, 4, 1], score=5, hints=0)
+        db.session.add(game)
+        db.session.commit()
+
+        self.assertIsNone(game.final_score)
+
+        # Player 1 discards
+        response = self.client.put(
+            url_for('api.make_move', game_id=1),
+            headers={'Content-Type': 'application/json', 'id': 'id1'},
+            data=json.dumps({'type': 'discard', 'cardIndex': 0}))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(game.final_score, 0)
+
+    def test_lose_perfect_hard_game(self):
+        """Perfect mode ends as soon as it's impossible"""
+        game = Game(players=['id1', 'id2'], started=True, perfect_mode=True, discard={Colour.RAINBOW: []}, hints=0,
+                    hands=[[Card(51)], []], deck=[3, 4, 5], score=5, hard_mode=True)
+        db.session.add(game)
+        db.session.commit()
+
+        self.assertIsNone(game.final_score)
+
+        # Player 1 discards
+        response = self.client.put(
+            url_for('api.make_move', game_id=1),
+            headers={'Content-Type': 'application/json', 'id': 'id1'},
+            data=json.dumps({'type': 'discard', 'cardIndex': 0}))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(game.final_score, 0)

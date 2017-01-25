@@ -121,5 +121,3 @@ class GameModelTestCase(unittest.TestCase):
 
         db.session.flush()
         self.assertEqual(len(g.players), 5)
-
-    # Making moves tested in test_game_routes.py

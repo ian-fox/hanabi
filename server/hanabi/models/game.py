@@ -153,7 +153,7 @@ class Game(db.Model):
 
                 # Increment the score, check if game is over
                 self.score += 1
-                if self.score == 30 or self.score == 25 and self.hard_mode:
+                if self.score == 30:
                     self.final_score = self.score
             else:
                 self.misfires -= 1
