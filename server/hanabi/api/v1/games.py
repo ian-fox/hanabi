@@ -2,7 +2,7 @@ from . import api
 from flask import jsonify, url_for, request
 from hanabi import db
 from hanabi.models import Game, Move
-from hanabi.Exceptions import CannotJoinGame, CannotStartGame, InvalidMove
+from hanabi.exceptions import CannotJoinGame, CannotStartGame, InvalidMove
 from uuid import uuid4
 
 

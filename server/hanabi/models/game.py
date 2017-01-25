@@ -1,62 +1,13 @@
 from hanabi import db
-from enum import IntEnum
-from random import shuffle, randint
+from random import randint
 from flask import url_for
-from hanabi.Exceptions import CannotJoinGame, CannotStartGame, InvalidMove
+from hanabi.exceptions import CannotJoinGame, CannotStartGame, InvalidMove
+from hanabi.models import Colour, new_deck, MoveType, Card
 from uuid import uuid4
 
 
 def rotate(array, offset):
     return array[-offset:] + array[:offset]
-
-
-class Colour(IntEnum):
-    BLUE = 0
-    GREEN = 1
-    RED = 2
-    WHITE = 3
-    YELLOW = 4
-    RAINBOW = 5
-
-
-class MoveType(IntEnum):
-    HINT = 0
-    PLAY = 1
-    DISCARD = 2
-
-
-class HintType(IntEnum):
-    COLOUR = 0
-    RANK = 1
-
-
-class Card:
-    def __init__(self, int_representation):
-        self.colour = Colour(int_representation // 10)
-        self.rank = int_representation % 10
-        self.colourKnown = None
-        self.rankKnown = False
-
-    def to_num(self):
-        return 10 * self.colour.value + self.rank
-
-
-def new_deck(hard_mode=False):
-    """Return a full, shuffled deck in number form"""
-    deck = []
-    for colour in range(5):
-        for rank in [1, 1, 1, 2, 2, 3, 3, 4, 4, 5]:
-            deck.append(10 * colour + rank)
-
-    if not hard_mode:
-        for rank in [1, 1, 1, 2, 2, 3, 3, 4, 4, 5]:
-            deck.append(50 + rank)
-    else:
-        for rank in range(1, 6):
-            deck.append(50 + rank)
-
-    shuffle(deck)
-    return deck
 
 
 class Game(db.Model):
@@ -190,27 +141,3 @@ class Game(db.Model):
         if len(self.deck) == 0 and not self.perfect_mode:
             self.last_turn = True
             self.last_player = move.moving_player
-
-
-class Move:
-    def __init__(self, json, player, num_players):
-        self.move_type = MoveType(['hint', 'play', 'discard'].index(json['type']))
-        self.moving_player = player
-
-        if self.move_type == MoveType.HINT:
-            if json.get('rank') and json.get('colour'):
-                raise InvalidMove('Both rank and colour specified in hint')
-
-            if json.get('rank'):
-                self.hint_type = HintType.RANK
-                self.hint_rank = json['rank']
-                self.hint_colour = None
-            else:
-                self.hint_type = HintType.COLOUR
-                self.hint_colour = Colour(['blue', 'green', 'red', 'white', 'yellow', 'rainbow'].index(json['colour']))
-                self.hint_rank = None
-
-            self.hinted_player = (json['playerIndex'] + player) % num_players
-
-        else:
-            self.card_index = json['cardIndex']
