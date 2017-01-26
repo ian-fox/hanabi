@@ -8,4 +8,6 @@ before_install:
 install: "pip install -r server/requirements.txt"
 script:
   - export TEST_DATABASE_URL=mysql://root:@localhost/hanabi
+  - export DATABASE_URL=mysql://root:@loaclhost/hanabi
+  - export DEV_DATABASE_URL=myslq://root:@localhost/hanabi
   - python server/manage.py test
